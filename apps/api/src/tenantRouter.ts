@@ -3,6 +3,7 @@ import { mount } from './lib/routeRegistry';
 import { invitesRouter } from './modules/invites/invite.routes';
 import { membersRouter, workspaceMemberActions } from './modules/members/member.routes';
 import { projectsRouter } from './modules/projects/project.routes';
+import { myTasksRouter, tasksRouter } from './modules/tasks/task.routes';
 import { workspaceRouter } from './modules/workspaces/workspace.routes';
 
 /**
@@ -19,3 +20,5 @@ mount(tenantRouter, '/', workspaceMemberActions);
 mount(tenantRouter, '/members', membersRouter);
 mount(tenantRouter, '/invites', invitesRouter);
 mount(tenantRouter, '/projects', projectsRouter);
+mount(tenantRouter, '/tasks', tasksRouter);
+mount(tenantRouter, '/my-tasks', myTasksRouter);

@@ -1,5 +1,5 @@
 // Response shapes shared by the API (which builds them) and the web app (which reads them).
-import type { ColumnCategory, PaletteColor, Role } from './constants';
+import type { ColumnCategory, PaletteColor, Priority, Role } from './constants';
 
 export type Id = string;
 
@@ -110,6 +110,67 @@ export interface ProjectListItemDto {
   openTasks: number;
   activeSprint: { id: Id; name: string } | null; // filled in on Day 18
   archivedAt: string | null;
+}
+
+/** What a card on the board needs (the task model's CARD_FIELDS). */
+export interface TaskCardDto {
+  id: Id;
+  projectId: Id;
+  number: number;
+  title: string;
+  columnId: Id;
+  rank: string;
+  assigneeIds: Id[];
+  priority: Priority;
+  dueDate: string | null; // YYYY-MM-DD
+  labelIds: Id[];
+  storyPoints: number | null;
+  sprintId: Id | null;
+  completedAt: string | null;
+  commentCount: number;
+  version: number;
+}
+
+/** The full task, for the drawer. */
+export interface TaskDto extends TaskCardDto {
+  description: string;
+  reporterId: Id;
+  watcherIds: Id[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BoardMemberDto {
+  userId: Id;
+  name: string;
+  avatarColor: PaletteColor;
+  role: Role;
+}
+
+export interface SprintSummaryDto {
+  id: Id;
+  name: string;
+  number: number;
+  goal: string;
+  startDate: string;
+  endDate: string;
+}
+
+/** GET /projects/:key/board: everything the board needs in ONE request (FR-BRD-10). */
+export interface BoardResponse {
+  project: ProjectDto;
+  view: 'active' | 'backlog' | 'all' | Id;
+  activeSprint: SprintSummaryDto | null;
+  tasks: TaskCardDto[]; // sorted by (columnId, rank); the client groups them into columns
+  members: BoardMemberDto[];
+  /** Users no longer in the workspace but still assigned to a task here (FR-MEM-06c). */
+  formerMembers: { userId: Id; name: string; avatarColor: PaletteColor }[];
+}
+
+/** GET /my-tasks (FR-TSK-11): open tasks assigned to me, plus the projects to group them by. */
+export interface MyTasksResponse {
+  tasks: TaskCardDto[];
+  projects: { id: Id; key: string; name: string }[];
 }
 
 export interface AuthResponse {

@@ -18,6 +18,8 @@ const PARAMS: Record<string, (t: Team) => string> = {
   key: (t) => t.project.key,
   columnId: (t) => t.project.columns[0]!.id, // "To Do": empty, so an allowed delete succeeds
   labelId: (t) => t.label.id,
+  taskId: (t) => t.task.id,
+  number: (t) => String(t.task.number),
 };
 
 function urlFor(path: string, t: Team) {

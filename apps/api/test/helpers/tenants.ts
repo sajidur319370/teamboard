@@ -1,5 +1,19 @@
-import type { LabelDto, ProjectDto, Role, WorkspaceDto } from '@teamboard/shared';
+import type { LabelDto, ProjectDto, Role, TaskDto, WorkspaceDto } from '@teamboard/shared';
 import { as, registerUser } from './auth';
+
+/** Creates a task through the API (POST /projects/:key/tasks). */
+export async function makeTask(
+  token: string,
+  ws: WorkspaceDto,
+  key: string,
+  body: Record<string, unknown> = {},
+) {
+  const res = await as(token)
+    .post(`/api/w/${ws.slug}/projects/${key}/tasks`)
+    .send({ title: 'A task', ...body });
+  if (res.status !== 201) throw new Error(`task failed: ${JSON.stringify(res.body)}`);
+  return res.body.task as TaskDto;
+}
 
 let n = 0;
 
@@ -72,7 +86,8 @@ export async function twoTenants() {
     const invite = await makeInvite(owner.token, ws, { role: 'viewer' });
     const project = await makeProject(owner.token, ws, key, `${wsName} project`);
     const label = await makeLabel(owner.token, ws, key);
-    return { ...owner, ws, member, inviteId: invite.id, project, label };
+    const task = await makeTask(owner.token, ws, key, { title: `${wsName} task` });
+    return { ...owner, ws, member, inviteId: invite.id, project, label, task };
   };
   return {
     a: await make('Alice', 'A Corp', 'AAA'),
@@ -96,6 +111,9 @@ export async function makeTeam() {
   const invite = await makeInvite(owner.token, ws, { role: 'viewer' });
   const project = await makeProject(owner.token, ws, 'MOB');
   const label = await makeLabel(owner.token, ws, 'MOB');
+  // Reported by the MEMBER: members may delete only their own tasks (FR-TSK-05), so the
+  // RBAC matrix can expect "not 403" for every role that has task:delete.
+  const task = await makeTask(member.token, ws, 'MOB', { title: 'Fixture task' });
   return {
     ws,
     slug: ws.slug,
@@ -108,6 +126,7 @@ export async function makeTeam() {
     inviteId: invite.id,
     project,
     label,
+    task,
   };
 }
 export type Team = Awaited<ReturnType<typeof makeTeam>>;

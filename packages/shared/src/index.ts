@@ -6,3 +6,4 @@ export * from './schemas/auth';
 export * from './schemas/workspace';
 export * from './schemas/member';
 export * from './schemas/project';
+export * from './schemas/task';

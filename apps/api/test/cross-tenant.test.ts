@@ -51,6 +51,13 @@ const PROBES: Probe[] = [
   { route: 'POST /projects/:key/labels', body: () => ({ name: 'Pwned', color: 'red' }) },
   { route: 'PATCH /projects/:key/labels/:labelId', body: () => ({ name: 'pwned' }) },
   { route: 'DELETE /projects/:key/labels/:labelId' },
+  // Day 9: board, tasks, my tasks
+  { route: 'GET /projects/:key/board' },
+  { route: 'POST /projects/:key/tasks', body: () => ({ title: 'pwned' }) },
+  { route: 'GET /projects/:key/tasks/:number' },
+  { route: 'PATCH /tasks/:taskId', body: () => ({ title: 'pwned' }) },
+  { route: 'DELETE /tasks/:taskId' },
+  { route: 'GET /my-tasks' },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */
@@ -60,6 +67,8 @@ const B_IDS: Record<string, (t: T) => string> = {
   key: (t) => t.b.project.key,
   columnId: (t) => t.b.project.columns[0]!.id,
   labelId: (t) => t.b.label.id,
+  taskId: (t) => t.b.task.id,
+  number: (t) => String(t.b.task.number),
 };
 
 function request(t: T, probe: Probe, slug: string) {
@@ -119,6 +128,10 @@ describe('cross-tenant isolation', () => {
     expect(project.body.project).toEqual({ ...t.b.project, labels: [t.b.label] });
     const projects = await bob.get(`/api/w/${t.b.ws.slug}/projects`);
     expect(projects.body.projects.map((p: { key: string }) => p.key)).toEqual(['BEE']);
+    const task = await bob.get(`/api/w/${t.b.ws.slug}/projects/BEE/tasks/${t.b.task.number}`);
+    expect(task.body.task).toMatchObject({ id: t.b.task.id, title: 'B Corp task', version: 1 });
+    const board = await bob.get(`/api/w/${t.b.ws.slug}/projects/BEE/board`);
+    expect(board.body.tasks.map((x: { id: string }) => x.id)).toEqual([t.b.task.id]);
   });
 
   it("A's lists never contain B's data", async () => {

@@ -22,6 +22,7 @@ export const PRIORITIES = ['urgent', 'high', 'medium', 'low', 'none'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
 export const STORY_POINTS = [0, 1, 2, 3, 5, 8, 13, 21] as const;
+export type StoryPoint = (typeof STORY_POINTS)[number];
 
 export const SPRINT_STATES = ['planned', 'active', 'completed'] as const;
 export type SprintState = (typeof SPRINT_STATES)[number];

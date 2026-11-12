@@ -128,7 +128,7 @@ describe('list, get, update', () => {
       expect.objectContaining({
         key: 'MOB',
         name: 'Mobile App',
-        openTasks: 2,
+        openTasks: 3, // 2 here + the fixture task
         activeSprint: null,
         archivedAt: null,
       }),

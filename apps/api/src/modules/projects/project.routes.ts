@@ -13,6 +13,9 @@ import {
   updateColumnSchema,
   updateLabelSchema,
   updateProjectSchema,
+  boardQuery,
+  createTaskSchema,
+  taskNumberParams,
 } from '@teamboard/shared';
 import { authorize } from '../../middleware/authorize';
 import { validate, valid } from '../../middleware/validate';
@@ -20,6 +23,8 @@ import { oid } from '../../lib/ids';
 import * as projects from './project.service';
 import * as columns from './column.service';
 import * as labels from './label.service';
+import * as tasks from '../tasks/task.service';
+import { loadBoard } from '../tasks/board.service';
 
 /** /api/w/:slug/projects. Projects are addressed by key in URLs (FR-PRJ-10). */
 export const projectsRouter = Router({ mergeParams: true });
@@ -133,6 +138,36 @@ projectsRouter.delete(
     res.json({
       columns: await columns.deleteColumn(req.ctx, params.key, oid(params.columnId), target),
     });
+  },
+);
+
+// ── Board & tasks (FR-BRD-10, FR-TSK-01, FR-TSK-07) ────────────────────────
+
+const boardReq = { params: keyParams, query: boardQuery };
+projectsRouter.get('/:key/board', authorize('task:view'), validate(boardReq), async (req, res) => {
+  const { params, query } = valid(req, boardReq);
+  res.json(await loadBoard(req.ctx, params.key, query.sprint));
+});
+
+const createTaskReq = { params: keyParams, body: createTaskSchema };
+projectsRouter.post(
+  '/:key/tasks',
+  authorize('task:create'),
+  validate(createTaskReq),
+  async (req, res) => {
+    const { params, body } = valid(req, createTaskReq);
+    res.status(201).json({ task: await tasks.createTask(req.ctx, params.key, body) });
+  },
+);
+
+const byNumberReq = { params: taskNumberParams };
+projectsRouter.get(
+  '/:key/tasks/:number',
+  authorize('task:view'),
+  validate(byNumberReq),
+  async (req, res) => {
+    const { key, number } = valid(req, byNumberReq).params;
+    res.json({ task: await tasks.getTaskByNumber(req.ctx, key, number) });
   },
 );
 
