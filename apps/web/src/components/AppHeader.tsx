@@ -1,20 +1,16 @@
-import { Link } from 'react-router';
-import { useMe } from '@/features/auth/useMe';
-import { UserAvatar } from './UserAvatar';
+import type { WorkspaceDto } from '@teamboard/shared';
+import { WorkspaceSwitcher } from '@/features/workspace/WorkspaceSwitcher';
+import { UserMenu } from './UserMenu';
 
-/** Minimal top bar for now. Day 7 replaces it with the workspace layout (switcher, bell, menu). */
-export function AppHeader() {
-  const { data } = useMe();
+/** The top bar on every logged-in page. Inside a workspace, pass it as `current`. */
+export function AppHeader({ current }: { current?: WorkspaceDto }) {
   return (
-    <header className="flex h-14 items-center justify-between border-b px-4">
-      <Link to="/workspaces" className="font-bold tracking-tight">
-        TeamBoard
-      </Link>
-      {data && (
-        <Link to="/profile" aria-label="Your profile" className="rounded-full">
-          <UserAvatar name={data.user.name} color={data.user.avatarColor} className="size-8" />
-        </Link>
-      )}
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 sm:px-4">
+      <WorkspaceSwitcher current={current} />
+      <div className="flex items-center gap-3">
+        {/* Day 17: <NotificationBell /> */}
+        <UserMenu />
+      </div>
     </header>
   );
 }

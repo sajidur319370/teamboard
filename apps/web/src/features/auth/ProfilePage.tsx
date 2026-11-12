@@ -19,20 +19,12 @@ import { UserAvatar } from '@/components/UserAvatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { TimezoneSelect } from '@/components/TimezoneSelect';
 import { applyServerErrors } from '@/lib/formErrors';
 import { AVATAR_BG } from '@/lib/colors';
 import { cn } from '@/lib/utils';
 import { useLogout } from './useAuthActions';
 import { useMe } from './useMe';
-
-const TIMEZONES = ['UTC', ...Intl.supportedValuesOf('timeZone').filter((tz) => tz !== 'UTC')];
 
 export function ProfilePage() {
   const { data } = useMe(); // RequireAuth guarantees data is loaded
@@ -71,7 +63,6 @@ function ProfileForm({ user }: { user: UserDto }) {
   const onSubmit = handleSubmit((v) =>
     save.mutateAsync(v).catch((e: unknown) => applyServerErrors(e, setError)),
   );
-  const timezones = TIMEZONES.includes(user.timezone) ? TIMEZONES : [user.timezone, ...TIMEZONES];
 
   return (
     <Card>
@@ -130,18 +121,7 @@ function ProfileForm({ user }: { user: UserDto }) {
               control={control}
               name="timezone"
               render={({ field }) => (
-                <Select value={field.value ?? 'UTC'} onValueChange={field.onChange}>
-                  <SelectTrigger id="timezone" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz} value={tz}>
-                        {tz.replaceAll('_', ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <TimezoneSelect id="timezone" value={field.value} onChange={field.onChange} />
               )}
             />
           </FormField>
@@ -222,7 +202,7 @@ function PasswordForm() {
 
 function SessionsCard() {
   const logout = useLogout();
-  const logoutAll = useLogout(true);
+  const logoutAll = useLogout({ all: true });
   return (
     <Card>
       <CardHeader>

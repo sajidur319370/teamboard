@@ -6,7 +6,13 @@ import { RegisterPage } from '@/features/auth/RegisterPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { ProfilePage } from '@/features/auth/ProfilePage';
-import { WorkspacesPlaceholder } from '@/features/workspaces/WorkspacesPlaceholder';
+import { AcceptInvitePage } from '@/features/invites/AcceptInvitePage';
+import { MembersPage } from '@/features/members/MembersPage';
+import { CreateWorkspacePage } from '@/features/workspace/CreateWorkspacePage';
+import { SettingsPage } from '@/features/workspace/SettingsPage';
+import { WorkspaceLayout } from '@/features/workspace/WorkspaceLayout';
+import { WorkspacesPage } from '@/features/workspace/WorkspacesPage';
+import { ComingSoon } from '@/components/ComingSoon';
 import { NotFoundPage } from '@/components/NotFoundPage';
 
 export function AppRoutes() {
@@ -19,10 +25,21 @@ export function AppRoutes() {
       </Route>
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+      {/* Public: works logged in or out (must stay OUTSIDE RequireAuth) */}
+      <Route path="/invite/:token" element={<AcceptInvitePage />} />
 
       <Route element={<RequireAuth />}>
-        <Route path="/workspaces" element={<WorkspacesPlaceholder />} />
+        <Route path="/workspaces" element={<WorkspacesPage />} />
+        <Route path="/onboarding" element={<CreateWorkspacePage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/w/:slug" element={<WorkspaceLayout />}>
+          <Route index element={<Navigate to="projects" replace />} />
+          <Route path="projects" element={<ComingSoon title="Projects" day={10} />} />
+          <Route path="my-tasks" element={<ComingSoon title="My tasks" day={11} />} />
+          <Route path="activity" element={<ComingSoon title="Activity" day={16} />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
       </Route>
 
       <Route path="/" element={<Navigate to="/workspaces" replace />} />

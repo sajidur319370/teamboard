@@ -41,7 +41,11 @@ export function useClearSession() {
   };
 }
 
-export function useLogout(all = false) {
+/**
+ * @param all       log out of every device (POST /auth/logout-all)
+ * @param redirectTo where to go afterwards, e.g. `/login?returnTo=/invite/abc` (E15)
+ */
+export function useLogout({ all = false, redirectTo = '/login' } = {}) {
   const clearSession = useClearSession();
   const navigate = useNavigate();
   return useMutation({
@@ -49,7 +53,7 @@ export function useLogout(all = false) {
     // Even if the request fails (offline), the user asked to leave: clear local state.
     onSettled: () => {
       clearSession();
-      navigate('/login', { replace: true });
+      navigate(redirectTo, { replace: true });
     },
   });
 }
