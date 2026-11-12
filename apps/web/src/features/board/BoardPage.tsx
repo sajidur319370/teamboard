@@ -1,26 +1,33 @@
 import { useMemo } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
-import { ArchiveIcon } from 'lucide-react';
+import { ArchiveIcon, SettingsIcon } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCan, useWorkspace } from '@/features/workspace/WorkspaceContext';
+import { useMe } from '@/features/auth/useMe';
+import { Can, useCan, useWorkspace } from '@/features/workspace/WorkspaceContext';
+import { AddColumn } from './AddColumn';
 import { BoardProvider, type BoardCtx, type Person } from './BoardContext';
 import { BoardColumn } from './BoardColumn';
+import { FilterBar } from './FilterBar';
 import { useBoard } from './api';
 import { groupByColumn } from './grouping';
+import { matches, parseFilters } from './useBoardFilters';
 
 /**
  * /w/:slug/p/:key/board and /w/:slug/p/:key/tasks/:number (the drawer is a child route,
- * so a task URL opens the board WITH the drawer: FR-TSK-07). The sprint view lives in
- * the search params, so opening/closing the drawer never refetches the board.
+ * so a task URL opens the board WITH the drawer: FR-TSK-07). The sprint view and the
+ * filters live in the search params, so opening/closing the drawer never refetches.
  */
 export function BoardPage() {
   const { slug = '', key = '' } = useParams();
   const { search } = useLocation();
-  const sprint = new URLSearchParams(search).get('sprint') ?? 'active';
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const sprint = params.get('sprint') ?? 'active';
   const { workspace } = useWorkspace();
-  const canEdit = useCan()('task:update');
+  const can = useCan();
+  const canEdit = can('task:update');
+  const myId = useMe().data?.user.id ?? '';
   const board = useBoard(slug, key, sprint);
 
   const ctx = useMemo<BoardCtx | null>(() => {
@@ -43,7 +50,13 @@ export function BoardPage() {
     };
   }, [board.data, slug, search, workspace.settings.timezone, canEdit]);
 
-  const columns = useMemo(() => (board.data ? groupByColumn(board.data) : {}), [board.data]);
+  const filters = useMemo(() => parseFilters(params), [params]);
+  const all = useMemo(() => (board.data ? groupByColumn(board.data) : {}), [board.data]);
+  const shown = useMemo(
+    () => (board.data ? groupByColumn(board.data, matches(filters, myId)) : {}),
+    [board.data, filters, myId],
+  );
+  const shownCount = Object.values(shown).reduce((n, l) => n + l.length, 0);
 
   if (board.isPending) return <BoardSkeleton />;
   if (board.error || !ctx) {
@@ -61,29 +74,46 @@ export function BoardPage() {
   }
 
   const { project } = ctx.board;
+  const archived = !!project.archivedAt;
   return (
     <BoardProvider value={ctx}>
       <div className="flex h-full flex-col">
-        <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6">
-          <h1 className="text-lg font-semibold">{project.name}</h1>
-          <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
-            {project.key}
-          </span>
-          {project.archivedAt && (
-            <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-900">
-              <ArchiveIcon className="size-3.5" /> Archived: read-only
+        <header className="space-y-3 border-b px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-lg font-semibold">{project.name}</h1>
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+              {project.key}
             </span>
-          )}
-          {/* Day 11: <FilterBar />  ·  Day 19: <SprintSelector /> */}
+            {archived && (
+              <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-sm text-amber-900">
+                <ArchiveIcon className="size-3.5" /> Archived: read-only
+              </span>
+            )}
+            <Can perm="project:update">
+              <Button asChild variant="ghost" size="sm" className="ml-auto">
+                <Link to={`/w/${slug}/p/${project.key}/settings`}>
+                  <SettingsIcon /> Settings
+                </Link>
+              </Button>
+            </Can>
+            {/* Day 19: <SprintSelector /> */}
+          </div>
+          <FilterBar shown={shownCount} total={ctx.board.tasks.length} />
         </header>
         <div
-          className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-3 sm:p-4"
+          className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 sm:p-4"
           role="region"
           aria-label={`${project.name} board`}
         >
           {project.columns.map((col) => (
-            <BoardColumn key={col.id} column={col} tasks={columns[col.id] ?? []} />
+            <BoardColumn
+              key={col.id}
+              column={col}
+              tasks={shown[col.id] ?? []}
+              totalInColumn={all[col.id]?.length ?? 0}
+            />
           ))}
+          {can('column:manage') && !archived && <AddColumn />}
         </div>
         <Outlet /> {/* the task drawer, when the URL is …/tasks/:number */}
       </div>

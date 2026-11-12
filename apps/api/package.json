@@ -7,7 +7,9 @@
     "build": "tsx scripts/build.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:diff-indexes": "node --env-file=.env.atlas --import tsx scripts/sync-indexes.ts",
+    "db:sync-indexes": "node --env-file=.env.atlas --import tsx scripts/sync-indexes.ts --apply"
   },
   "dependencies": {
     "@teamboard/shared": "*",

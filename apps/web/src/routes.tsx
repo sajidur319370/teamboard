@@ -10,6 +10,8 @@ import { AcceptInvitePage } from '@/features/invites/AcceptInvitePage';
 import { BoardPage } from '@/features/board/BoardPage';
 import { TaskDrawer } from '@/features/board/TaskDrawer';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
+import { ProjectSettingsPage } from '@/features/projects/ProjectSettingsPage';
+import { MyTasksPage } from '@/features/projects/MyTasksPage';
 import { MembersPage } from '@/features/members/MembersPage';
 import { CreateWorkspacePage } from '@/features/workspace/CreateWorkspacePage';
 import { SettingsPage } from '@/features/workspace/SettingsPage';
@@ -38,13 +40,14 @@ export function AppRoutes() {
         <Route path="/w/:slug" element={<WorkspaceLayout />}>
           <Route index element={<Navigate to="projects" replace />} />
           <Route path="projects" element={<ProjectsPage />} />
+          <Route path="p/:key/settings" element={<ProjectSettingsPage />} />
           <Route path="p/:key" element={<BoardPage />}>
             <Route index element={<Navigate to="board" replace />} />
             <Route path="board" element={null} />
             {/* The drawer: the board stays rendered underneath (FR-TSK-07) */}
             <Route path="tasks/:number" element={<TaskDrawer />} />
           </Route>
-          <Route path="my-tasks" element={<ComingSoon title="My tasks" day={11} />} />
+          <Route path="my-tasks" element={<MyTasksPage />} />
           <Route path="activity" element={<ComingSoon title="Activity" day={16} />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="settings" element={<SettingsPage />} />

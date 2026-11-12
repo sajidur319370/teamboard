@@ -11,6 +11,7 @@ import { dueState, type Priority, type TaskCardDto } from '@teamboard/shared';
 import { UserAvatar } from '@/components/UserAvatar';
 import { LABEL_CHIP } from '@/lib/colors';
 import { cn } from '@/lib/utils';
+import { useUi } from '@/stores/ui';
 import { useBoardCtx } from './BoardContext';
 
 export const PRIORITY_ICON: Record<Priority, ReactNode> = {
@@ -34,6 +35,7 @@ export function TaskCard({ task }: { task: TaskCardDto }) {
   const due = dueState(task.dueDate, !!task.completedAt, tz);
   const assignees = task.assigneeIds.map((id) => people.get(id)).filter((p) => !!p);
   const chips = task.labelIds.map((id) => labels.get(id)).filter((l) => !!l);
+  const compact = useUi((s) => s.compactCards); // compact: title + number only
 
   return (
     <Link
@@ -53,7 +55,7 @@ export function TaskCard({ task }: { task: TaskCardDto }) {
       </div>
       <p className="line-clamp-2 text-sm font-medium">{task.title}</p>
 
-      {chips.length > 0 && (
+      {!compact && chips.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {chips.map((l) => (
             <span
@@ -66,7 +68,7 @@ export function TaskCard({ task }: { task: TaskCardDto }) {
         </div>
       )}
 
-      {(task.dueDate || task.commentCount > 0 || assignees.length > 0) && (
+      {!compact && (task.dueDate || task.commentCount > 0 || assignees.length > 0) && (
         <div className="mt-2 flex items-center gap-2 text-xs">
           {task.dueDate && (
             <span className={DUE_CLASS[due]} title={due === 'overdue' ? 'Overdue' : 'Due date'}>

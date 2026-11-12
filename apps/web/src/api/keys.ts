@@ -11,6 +11,7 @@ export const qk = {
   members: (slug: string) => ['w', slug, 'members'] as const,
   invites: (slug: string) => ['w', slug, 'invites'] as const,
   projects: (slug: string) => ['w', slug, 'projects'] as const,
+  project: (slug: string, key: string) => ['w', slug, 'project', key] as const,
   /** Prefix of every board view of one project, for invalidation. */
   boardAll: (slug: string, key: string) => ['w', slug, 'board', key] as const,
   board: (slug: string, key: string, sprint: string) => ['w', slug, 'board', key, sprint] as const,

@@ -48,6 +48,14 @@ export function toAppError(err: unknown): AppError {
   if (e.type === 'entity.too.large') {
     return new AppError(413, 'PAYLOAD_TOO_LARGE', 'Request body is too large.');
   }
+  // Standard http-errors from Express middleware (serve-static's missing file is an ENOENT
+  // with status 404; a bad URI is a 400…): keep the 4xx instead of turning it into a 500.
+  // Safe even when the library says expose: false, because we never forward its message
+  // (it can contain a file path); the client only ever sees our generic text.
+  const h = err as { status?: unknown };
+  if (typeof h.status === 'number' && h.status >= 400 && h.status < 500) {
+    return h.status === 404 ? notFound() : new AppError(h.status, 'BAD_REQUEST', 'Bad request.');
+  }
 
   return new AppError(500, 'INTERNAL_ERROR', 'Something went wrong.');
 }

@@ -23,3 +23,5 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
+      # Render runs exactly this; catch a broken production build here, not on deploy.
+      - run: npm run build

@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import type { ColumnCategory, ColumnDto, TaskCardDto } from '@teamboard/shared';
+import { Input } from '@/components/ui/input';
 import { useCan } from '@/features/workspace/WorkspaceContext';
+import { useUpdateColumn } from '@/features/projects/api';
 import { cn } from '@/lib/utils';
 import { useBoardCtx } from './BoardContext';
+import { CATEGORY_LABEL, ColumnMenu } from './ColumnMenu';
 import { QuickAdd } from './QuickAdd';
 import { TaskCard } from './TaskCard';
 
@@ -10,16 +14,28 @@ const CATEGORY_DOT: Record<ColumnCategory, string> = {
   in_progress: 'bg-blue-500',
   done: 'bg-green-600',
 };
-const CATEGORY_LABEL: Record<ColumnCategory, string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  done: 'Done',
-};
 
-export function BoardColumn({ column, tasks }: { column: ColumnDto; tasks: TaskCardDto[] }) {
-  const { board } = useBoardCtx();
-  const canCreate = useCan()('task:create') && !board.project.archivedAt;
+export function BoardColumn(props: {
+  column: ColumnDto;
+  tasks: TaskCardDto[];
+  /** All tasks in this column, before filters (for the delete dialog's count). */
+  totalInColumn: number;
+}) {
+  const { column, tasks } = props;
+  const { board, slug, projectKey } = useBoardCtx();
+  const can = useCan();
+  const archived = !!board.project.archivedAt;
+  const canCreate = can('task:create') && !archived;
+  const canManage = can('column:manage') && !archived;
+  const [renaming, setRenaming] = useState(false);
+  const update = useUpdateColumn(slug, projectKey);
   const headingId = `col-${column.id}`;
+
+  const rename = (value: string) => {
+    setRenaming(false);
+    const name = value.trim();
+    if (name && name !== column.name) update.mutate({ id: column.id, name });
+  };
 
   return (
     <section
@@ -28,18 +44,40 @@ export function BoardColumn({ column, tasks }: { column: ColumnDto; tasks: TaskC
     >
       <header className="flex items-center gap-2 px-3 pt-3 pb-2">
         <span
-          className={cn('size-2 rounded-full', CATEGORY_DOT[column.category])}
+          className={cn('size-2 shrink-0 rounded-full', CATEGORY_DOT[column.category])}
           title={`Category: ${CATEGORY_LABEL[column.category]}`}
         />
-        <h2 id={headingId} className="truncate text-sm font-semibold">
-          {column.name}
-        </h2>
+        {renaming ? (
+          <Input
+            aria-label="Column name"
+            defaultValue={column.name}
+            maxLength={30}
+            autoFocus
+            className="h-7 text-sm"
+            onBlur={(e) => rename(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+              if (e.key === 'Escape') setRenaming(false);
+            }}
+          />
+        ) : (
+          <h2 id={headingId} className="truncate text-sm font-semibold">
+            {column.name}
+          </h2>
+        )}
         <span
           className="ml-auto text-xs text-muted-foreground"
-          aria-label={`${tasks.length} tasks`}
+          aria-label={`${tasks.length} tasks shown`}
         >
           {tasks.length}
         </span>
+        {canManage && (
+          <ColumnMenu
+            column={column}
+            taskCount={props.totalInColumn}
+            onRename={() => setRenaming(true)}
+          />
+        )}
       </header>
 
       <ol className="min-h-8 flex-1 space-y-2 overflow-y-auto px-2 pb-2">

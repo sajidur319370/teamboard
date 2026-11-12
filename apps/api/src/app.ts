@@ -1,3 +1,4 @@
+import path from 'node:path';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -9,8 +10,17 @@ import { rejectDollarKeys } from './middleware/rejectDollarKeys';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRouter } from './routes';
 
+export interface AppOptions {
+  /**
+   * Folder with the built React app (apps/web/dist). When set, Express also serves the
+   * web app, so the browser, the API and (Day 14) the sockets share ONE origin:
+   * first-party cookies, no CORS. server.ts sets it in production only.
+   */
+  webDist?: string;
+}
+
 /** Builds the Express app without listening, so tests can import it. */
-export function createApp() {
+export function createApp(options: AppOptions = {}) {
   const app = express();
   app.set('trust proxy', 1); // behind Render's proxy: correct req.ip for rate limits, secure cookies
   app.disable('x-powered-by');
@@ -40,7 +50,29 @@ export function createApp() {
 
   app.use('/api', apiRouter);
 
+  if (options.webDist) serveWebApp(app, options.webDist);
+
   app.use(notFoundHandler); // must be after all routes
   app.use(errorHandler); // must be last
   return app;
+}
+
+/** Static files + SPA fallback. Registered after /api and BEFORE the 404 handler. */
+function serveWebApp(app: express.Express, webDist: string) {
+  // Vite gives assets hashed filenames, so they can be cached "forever".
+  app.use(
+    '/assets',
+    express.static(path.join(webDist, 'assets'), {
+      immutable: true,
+      maxAge: '1y',
+      fallthrough: false,
+    }),
+  );
+  app.use(express.static(webDist, { index: false }));
+  // Any other GET that isn't an API/socket call gets index.html; React Router takes over.
+  app.get('/{*splat}', (req, res, next) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) return next();
+    res.setHeader('Cache-Control', 'no-cache'); // always pick up a new deploy
+    res.sendFile(path.join(webDist, 'index.html'));
+  });
 }
