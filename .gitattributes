@@ -1,0 +1,2 @@
+# Store LF in Git on every OS so Prettier and CI never fight over line endings.
+* text=auto eol=lf

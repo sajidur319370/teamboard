@@ -1,0 +1,24 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: teamboard-mongo
+    # Port 27019 (not 27017) so TeamBoard can run alongside other projects' MongoDB containers.
+    # mongod listens on the same port inside the container because the replica set
+    # advertises "localhost:27019" and the driver connects to exactly that address.
+    command: ['--replSet', 'rs0', '--bind_ip_all', '--port', '27019']
+    ports:
+      - '27019:27019'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # Initiates the replica set on first start, then just reports status.
+      test: >
+        echo "try { rs.status() } catch (e) {
+          rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27019' }] })
+        }" | mongosh --port 27019 --quiet
+      interval: 5s
+      timeout: 30s
+      retries: 30
+
+volumes:
+  mongo-data:
