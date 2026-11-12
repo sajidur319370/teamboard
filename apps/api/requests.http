@@ -1,0 +1,40 @@
+# Manual API checks with the VS Code "REST Client" extension (humao.rest-client).
+# Click "Send Request" above each block. Start the API first: npm run db:up && npm run dev
+@base = http://localhost:4000/api
+
+### Register
+# @name register
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{ "name": "Sajid", "email": "sajid@test.dev", "password": "Passw0rd!" }
+
+### Login
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "sajid@test.dev", "password": "Passw0rd!" }
+
+### Me (uses the token from the Login response above)
+GET {{base}}/me
+Authorization: Bearer {{login.response.body.accessToken}}
+
+### Update profile
+PATCH {{base}}/me
+Authorization: Bearer {{login.response.body.accessToken}}
+Content-Type: application/json
+
+{ "name": "Sajid R.", "timezone": "Asia/Dhaka" }
+
+### Refresh (REST Client re-sends the tb_refresh cookie automatically)
+POST {{base}}/auth/refresh
+
+### Forgot password (the reset link is printed in the API console)
+POST {{base}}/auth/forgot-password
+Content-Type: application/json
+
+{ "email": "sajid@test.dev" }
+
+### Logout
+POST {{base}}/auth/logout

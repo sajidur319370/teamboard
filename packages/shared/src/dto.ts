@@ -17,4 +17,17 @@ export interface WorkspaceSummaryDto {
   slug: string;
   role: Role;
 }
+export interface AuthResponse {
+  accessToken: string;
+  user: UserDto;
+}
+
+export interface RefreshResponse {
+  accessToken: string;
+}
+
+export interface MeResponse {
+  user: UserDto;
+  workspaces: WorkspaceSummaryDto[];
+}
 // More DTOs are added day by day.
