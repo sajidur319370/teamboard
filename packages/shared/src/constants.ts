@@ -36,6 +36,9 @@ export const PALETTE = [
   'purple',
   'pink',
 ] as const;
+export type PaletteColor = (typeof PALETTE)[number];
+export const isPaletteColor = (v: unknown): v is PaletteColor =>
+  typeof v === 'string' && (PALETTE as readonly string[]).includes(v);
 
 export const ENTITY_TYPES = [
   'workspace',

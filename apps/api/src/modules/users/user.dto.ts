@@ -1,5 +1,5 @@
 import type { Types } from 'mongoose';
-import type { UserDto } from '@teamboard/shared';
+import { isPaletteColor, type UserDto } from '@teamboard/shared';
 
 type UserLike = {
   _id: Types.ObjectId;
@@ -15,7 +15,7 @@ export function toUserDto(u: UserLike): UserDto {
     id: String(u._id),
     email: u.email,
     name: u.name,
-    avatarColor: u.avatarColor ?? 'blue',
+    avatarColor: isPaletteColor(u.avatarColor) ? u.avatarColor : 'blue',
     timezone: u.timezone ?? 'UTC',
   };
 }

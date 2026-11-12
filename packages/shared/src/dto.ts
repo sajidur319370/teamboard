@@ -1,5 +1,5 @@
 // Response shapes shared by the API (which builds them) and the web app (which reads them).
-import type { Role } from './constants';
+import type { PaletteColor, Role } from './constants';
 
 export type Id = string;
 
@@ -7,7 +7,7 @@ export interface UserDto {
   id: Id;
   email: string;
   name: string;
-  avatarColor: string;
+  avatarColor: PaletteColor;
   timezone: string;
 }
 
