@@ -7,6 +7,9 @@ import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { ProfilePage } from '@/features/auth/ProfilePage';
 import { AcceptInvitePage } from '@/features/invites/AcceptInvitePage';
+import { BoardPage } from '@/features/board/BoardPage';
+import { TaskDrawer } from '@/features/board/TaskDrawer';
+import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { MembersPage } from '@/features/members/MembersPage';
 import { CreateWorkspacePage } from '@/features/workspace/CreateWorkspacePage';
 import { SettingsPage } from '@/features/workspace/SettingsPage';
@@ -34,7 +37,13 @@ export function AppRoutes() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/w/:slug" element={<WorkspaceLayout />}>
           <Route index element={<Navigate to="projects" replace />} />
-          <Route path="projects" element={<ComingSoon title="Projects" day={10} />} />
+          <Route path="projects" element={<ProjectsPage />} />
+          <Route path="p/:key" element={<BoardPage />}>
+            <Route index element={<Navigate to="board" replace />} />
+            <Route path="board" element={null} />
+            {/* The drawer: the board stays rendered underneath (FR-TSK-07) */}
+            <Route path="tasks/:number" element={<TaskDrawer />} />
+          </Route>
           <Route path="my-tasks" element={<ComingSoon title="My tasks" day={11} />} />
           <Route path="activity" element={<ComingSoon title="Activity" day={16} />} />
           <Route path="members" element={<MembersPage />} />

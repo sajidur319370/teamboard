@@ -10,4 +10,10 @@ export const qk = {
   workspace: (slug: string) => ['w', slug] as const,
   members: (slug: string) => ['w', slug, 'members'] as const,
   invites: (slug: string) => ['w', slug, 'invites'] as const,
+  projects: (slug: string) => ['w', slug, 'projects'] as const,
+  /** Prefix of every board view of one project, for invalidation. */
+  boardAll: (slug: string, key: string) => ['w', slug, 'board', key] as const,
+  board: (slug: string, key: string, sprint: string) => ['w', slug, 'board', key, sprint] as const,
+  task: (slug: string, key: string, number: number) => ['w', slug, 'task', key, number] as const,
+  myTasks: (slug: string) => ['w', slug, 'my-tasks'] as const,
 };
