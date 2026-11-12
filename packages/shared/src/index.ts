@@ -4,3 +4,4 @@ export * from './permissions';
 export * from './schemas/common';
 export * from './schemas/auth';
 export * from './schemas/workspace';
+export * from './schemas/member';

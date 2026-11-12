@@ -1,53 +1,60 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { listRoutes } from '../src/lib/routeRegistry';
-import { workspaceRouter } from '../src/modules/workspaces/workspace.routes';
-import { as } from './helpers/auth';
+import { tenantRouter } from '../src/tenantRouter';
+import { PASSWORD, as } from './helpers/auth';
 import { twoTenants } from './helpers/tenants';
 
 type T = Awaited<ReturnType<typeof twoTenants>>;
-type Method = 'get' | 'post' | 'patch' | 'put' | 'delete';
 type Probe = {
-  /** The route this probe covers, exactly as the router declares it: 'PATCH /' */
+  /** The route exactly as the router declares it, e.g. 'PATCH /members/:userId' */
   route: string;
-  name: string;
-  method: Method;
-  path: (t: T) => string;
-  body?: object;
+  /** A VALID body, so a foreign-id request reaches the service instead of stopping at 400 */
+  body?: (t: T) => object;
 };
 
 /**
- * Alice (workspace A) tries to reach workspace B. Every probe must return 404.
- * THIS LIST GROWS EVERY DAY: one probe per tenant-scoped route (the coverage test enforces it).
+ * Alice (owner of workspace A) attacks workspace B. Each probe runs twice:
+ *  1. foreign slug:  /api/w/<B>/...            with B's ids  → 404 (not a member of B)
+ *  2. foreign id:    /api/w/<A>/...<B's id>    (routes with :params only) → 404 (IDOR)
+ * THIS LIST GROWS EVERY DAY. The coverage test fails if a route has no probe.
  */
 const PROBES: Probe[] = [
+  { route: 'GET /' },
+  { route: 'PATCH /', body: () => ({ name: 'pwned' }) },
+  { route: 'DELETE /', body: () => ({ confirmName: 'B Corp' }) },
+  { route: 'POST /leave' },
   {
-    route: 'GET /',
-    name: 'get workspace',
-    method: 'get',
-    path: (t) => `/api/w/${t.b.ws.slug}`,
+    route: 'POST /transfer-ownership',
+    body: (t) => ({ userId: t.b.member.user.id, password: PASSWORD }),
   },
-  {
-    route: 'PATCH /',
-    name: 'update workspace',
-    method: 'patch',
-    path: (t) => `/api/w/${t.b.ws.slug}`,
-    body: { name: 'pwned' },
-  },
-  {
-    route: 'DELETE /',
-    name: 'delete workspace',
-    method: 'delete',
-    path: (t) => `/api/w/${t.b.ws.slug}`,
-    body: { confirmName: 'B Corp' },
-  },
-  // Day 6+: members, invites, projects, tasks, comments, sprints, reports, activities, notifications…
+  { route: 'GET /members' },
+  { route: 'PATCH /members/:userId', body: () => ({ role: 'viewer' }) },
+  { route: 'DELETE /members/:userId' },
+  { route: 'GET /invites' },
+  { route: 'POST /invites', body: () => ({ role: 'viewer' }) },
+  { route: 'DELETE /invites/:inviteId' },
 ];
 
-/** Alice sends the probe at B's workspace. */
-function attack(t: T, probe: Probe) {
+/** Path params → B's ids. Add an entry when a route gets a new :param. */
+const B_IDS: Record<string, (t: T) => string> = {
+  userId: (t) => t.b.member.user.id,
+  inviteId: (t) => t.b.inviteId,
+};
+
+function request(t: T, probe: Probe, slug: string) {
+  const [method, path] = probe.route.split(' ') as [string, string];
+  const filled = path.replace(/:(\w+)/g, (_, name: string) => {
+    const pick = B_IDS[name];
+    if (!pick) throw new Error(`No B fixture for ":${name}". Add it to B_IDS.`);
+    return pick(t);
+  });
+  const url = `/api/w/${slug}${filled === '/' ? '' : filled}`;
   const client = as(t.a.token);
-  return client[probe.method](probe.path(t)).send(probe.body ?? {});
+  const m = method.toLowerCase() as 'get' | 'post' | 'patch' | 'put' | 'delete';
+  return client[m](url).send(probe.body?.(t) ?? {});
 }
+
+const hasParams = (p: Probe) => p.route.includes(':');
 
 describe('cross-tenant isolation', () => {
   let t: T;
@@ -55,31 +62,58 @@ describe('cross-tenant isolation', () => {
     t = await twoTenants();
   });
 
-  it.each(PROBES)('$name → 404', async (probe) => {
-    const res = await attack(t, probe);
+  it.each(PROBES)('foreign slug: $route → 404', async (probe) => {
+    const res = await request(t, probe, t.b.ws.slug);
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
-  it("B's workspace is untouched after all the probes", async () => {
-    for (const probe of PROBES) await attack(t, probe);
-    const res = await as(t.b.token).get(`/api/w/${t.b.ws.slug}`);
-    expect(res.status).toBe(200);
-    expect(res.body.workspace.name).toBe('B Corp');
+  it.each(PROBES.filter(hasParams))(
+    'foreign id in my own workspace: $route → 404',
+    async (probe) => {
+      const res = await request(t, probe, t.a.ws.slug);
+      expect(res.status).toBe(404);
+    },
+  );
+
+  it("B's data is untouched after every probe", async () => {
+    for (const probe of PROBES) {
+      await request(t, probe, t.b.ws.slug);
+      if (hasParams(probe)) await request(t, probe, t.a.ws.slug);
+    }
+    const bob = as(t.b.token);
+    const ws = await bob.get(`/api/w/${t.b.ws.slug}`);
+    expect(ws.body).toMatchObject({ workspace: { name: 'B Corp' }, role: 'owner' });
+    const members = await bob.get(`/api/w/${t.b.ws.slug}/members`);
+    expect(
+      members.body.members.map((m: { name: string; role: string }) => [m.name, m.role]),
+    ).toEqual([
+      ['B Corp member', 'member'],
+      ['Bob', 'owner'],
+    ]);
+    const invites = await bob.get(`/api/w/${t.b.ws.slug}/invites`);
+    expect(invites.body.invites.map((i: { id: string }) => i.id)).toEqual([t.b.inviteId]);
   });
 
-  it('my workspace list never contains B', async () => {
-    const me = await as(t.a.token).get('/api/me');
+  it("A's lists never contain B's data", async () => {
+    const alice = as(t.a.token);
+    const me = await alice.get('/api/me');
     expect(me.body.workspaces.map((w: { slug: string }) => w.slug)).toEqual([t.a.ws.slug]);
-    const list = await as(t.a.token).get('/api/workspaces');
-    expect(list.body.workspaces.map((w: { slug: string }) => w.slug)).toEqual([t.a.ws.slug]);
+
+    const members = await alice.get(`/api/w/${t.a.ws.slug}/members`);
+    const memberIds = members.body.members.map((m: { userId: string }) => m.userId);
+    expect(memberIds).toHaveLength(2);
+    expect(memberIds).not.toContain(t.b.user.id);
+    expect(memberIds).not.toContain(t.b.member.user.id);
+
+    const invites = await alice.get(`/api/w/${t.a.ws.slug}/invites`);
+    expect(invites.body.invites.map((i: { id: string }) => i.id)).toEqual([t.a.inviteId]);
   });
 });
 
 describe('cross-tenant coverage (TR-03)', () => {
   it('every tenant-scoped route has a probe, and every probe matches a real route', () => {
-    const routes = listRoutes(workspaceRouter).map((r) => `${r.method} ${r.path}`);
-    const probed = PROBES.map((p) => p.route);
-    expect([...new Set(probed)].sort()).toEqual([...new Set(routes)].sort());
+    const routes = listRoutes(tenantRouter).map((r) => `${r.method} ${r.path}`);
+    expect([...new Set(PROBES.map((p) => p.route))].sort()).toEqual([...new Set(routes)].sort());
   });
 });

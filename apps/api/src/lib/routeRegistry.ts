@@ -40,7 +40,8 @@ export function listRoutes(router: Router, prefix = ''): RouteInfo[] {
       if (mounted === undefined) {
         throw new Error(`A sub-router under "${prefix || '/'}" was mounted without mount()`);
       }
-      out.push(...listRoutes(layer.handle as unknown as Router, prefix + mounted));
+      const childPrefix = mounted === '/' ? prefix : prefix + mounted;
+      out.push(...listRoutes(layer.handle as unknown as Router, childPrefix));
     }
   }
   return out;

@@ -11,6 +11,7 @@ import { Activity, Membership, User, Workspace } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict, notFound } from '../../lib/errors';
 import { activity } from '../../events/activity';
+import { publish } from '../../events/publish';
 import { makeCtx, type Ctx } from '../../types/ctx';
 import { toWorkspaceDto } from './workspace.dto';
 
@@ -106,11 +107,16 @@ export async function softDeleteWorkspace(ctx: Ctx, confirmName: string) {
   if (ws.name !== confirmName) {
     throw badRequest('CONFIRMATION_MISMATCH', 'Type the workspace name exactly to confirm.');
   }
-  await Workspace.updateOne(
+  const memberIds = (
+    await Membership.find({ workspaceId: ctx.workspaceId }).select('userId').lean()
+  ).map((m) => m.userId);
+  const res = await Workspace.updateOne(
     { _id: ctx.workspaceId, deletedAt: null },
     { $set: { deletedAt: ctx.now() } },
   );
-  // Day 14: tell every member's sockets "membership:revoked"
+  if (res.modifiedCount === 0) throw notFound(); // deleted by a parallel request
+  // Day 14: the socket layer turns this into "membership:revoked" for every member
+  await publish(ctx, [{ type: 'workspace.deleted', memberIds }]);
 }
 
 export async function isSlugAvailable(slug: string) {

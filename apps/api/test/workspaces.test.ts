@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LIMITS } from '@teamboard/shared';
 import { Activity, Membership, Workspace } from '../src/db/models';
 import { as, registerUser } from './helpers/auth';
-import { addMember, fourRoles, makeWorkspace } from './helpers/tenants';
+import { addMember, makeTeam, makeWorkspace } from './helpers/tenants';
 
 const oid = (id: string) => new Types.ObjectId(id);
 
@@ -104,7 +104,7 @@ describe('check-slug', () => {
 
 describe('GET/PATCH/DELETE /w/:slug', () => {
   it('every role can view; the response carries my role', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     for (const [who, role] of [
       [t.owner, 'owner'],
       [t.admin, 'admin'],
@@ -118,7 +118,7 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('a non-member gets the same 404 as a slug that does not exist (AC-WS-01)', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const foreign = await as(t.outsider.token).get(`/api/w/${t.ws.slug}`);
     const missing = await as(t.outsider.token).get('/api/w/does-not-exist');
     expect(foreign.status).toBe(404);
@@ -128,7 +128,7 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('PATCH as owner and admin → 200 and an activity; member and viewer → 403', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const url = `/api/w/${t.ws.slug}`;
 
     const ok = await as(t.owner.token)
@@ -158,13 +158,13 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('a viewer gets 403, not 400, even for a garbage body (authorize runs before validate)', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const res = await as(t.viewer.token).patch(`/api/w/${t.ws.slug}`).send({ name: 42 });
     expect(res.status).toBe(403);
   });
 
   it('PATCH working days and week start (FR-WS-06); duplicates and empty lists → 400', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const url = `/api/w/${t.ws.slug}`;
     const ok = await as(t.owner.token)
       .patch(url)
@@ -177,7 +177,7 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('an empty PATCH changes nothing and writes no activity', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const res = await as(t.owner.token).patch(`/api/w/${t.ws.slug}`).send({});
     expect(res.status).toBe(200);
     expect(
@@ -186,7 +186,7 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('a role change applies on the very next request (FR-MEM-07)', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const url = `/api/w/${t.ws.slug}`;
     expect((await as(t.admin.token).patch(url).send({ name: 'Still admin' })).status).toBe(200);
     await Membership.updateOne(
@@ -198,7 +198,7 @@ describe('GET/PATCH/DELETE /w/:slug', () => {
   });
 
   it('DELETE: only the owner, with the exact name; then 404 for everyone and gone from /me', async () => {
-    const t = await fourRoles();
+    const t = await makeTeam();
     const url = `/api/w/${t.ws.slug}`;
 
     expect((await as(t.admin.token).delete(url).send({ confirmName: 'Roles Inc' })).status).toBe(
@@ -254,7 +254,7 @@ describe('GET /me workspaces', () => {
   it('addMember helper gives the right role (sanity check for later tests)', async () => {
     const owner = await registerUser();
     const ws = await makeWorkspace(owner.token);
-    const m = await addMember(ws, 'member');
+    const m = await addMember(owner.token, ws, 'member');
     expect((await as(m.token).get(`/api/w/${ws.slug}`)).body.role).toBe('member');
   });
 });

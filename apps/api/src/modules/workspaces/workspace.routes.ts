@@ -37,7 +37,7 @@ workspacesRouter.get('/check-slug', validate(checkReq), async (req, res) => {
 /**
  * /api/w/:slug: tenant-scoped (authenticate + resolveWorkspace already ran).
  * EVERY route here declares authorize(...) (FR-RBAC-05; enforced by test/route-audit.test.ts).
- * From Day 6 on, feature routers mount inside this one with mount(workspaceRouter, '/members', ...).
+ * It is mounted into src/tenantRouter.ts next to the feature routers (members, invites, ...).
  */
 export const workspaceRouter = Router({ mergeParams: true });
 

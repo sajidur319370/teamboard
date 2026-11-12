@@ -2,7 +2,7 @@ import { Router, type RequestHandler } from 'express';
 import { describe, expect, it } from 'vitest';
 import { authorize, authorizeHandlers } from '../src/middleware/authorize';
 import { listRoutes, mount } from '../src/lib/routeRegistry';
-import { workspaceRouter } from '../src/modules/workspaces/workspace.routes';
+import { tenantRouter } from '../src/tenantRouter';
 
 const startsWithAuthorize = (handlers: RequestHandler[]) =>
   !!handlers[0] && authorizeHandlers.has(handlers[0]);
@@ -10,7 +10,7 @@ const startsWithAuthorize = (handlers: RequestHandler[]) =>
 // FR-RBAC-05: every workspace route declares authorize(...), and it runs FIRST
 // (before validate), so a Viewer gets 403 even when sending garbage.
 describe('route audit', () => {
-  const routes = listRoutes(workspaceRouter);
+  const routes = listRoutes(tenantRouter);
 
   it('finds the workspace routes', () => {
     expect(routes.length).toBeGreaterThan(0);
