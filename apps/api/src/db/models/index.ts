@@ -5,4 +5,6 @@ export * from './session.model';
 export * from './workspace.model';
 export * from './membership.model';
 export * from './invite.model';
+export * from './project.model';
+export * from './task.model';
 export * from './activity.model';

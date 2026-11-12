@@ -15,6 +15,9 @@ import { makeTeam, type Team } from './helpers/tenants';
 const PARAMS: Record<string, (t: Team) => string> = {
   userId: (t) => t.target.user.id,
   inviteId: (t) => t.inviteId,
+  key: (t) => t.project.key,
+  columnId: (t) => t.project.columns[0]!.id, // "To Do": empty, so an allowed delete succeeds
+  labelId: (t) => t.label.id,
 };
 
 function urlFor(path: string, t: Team) {

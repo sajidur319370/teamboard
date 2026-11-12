@@ -1,5 +1,5 @@
 import type { Types } from 'mongoose';
-import type { MemberDto, Role } from '@teamboard/shared';
+import type { ColumnDto, MemberDto, ProjectDto, Role } from '@teamboard/shared';
 
 /**
  * What happened, in domain terms. Services emit these AFTER their transaction commits;
@@ -11,6 +11,18 @@ export type DomainEvent =
   | { type: 'member.roleChanged'; member: MemberDto; from: Role }
   | { type: 'member.removed'; userId: Types.ObjectId; reason: 'removed' | 'left' }
   | { type: 'ownership.transferred'; fromUserId: Types.ObjectId; toUserId: Types.ObjectId }
-  | { type: 'workspace.deleted'; memberIds: Types.ObjectId[] };
+  | { type: 'workspace.deleted'; memberIds: Types.ObjectId[] }
+  | {
+      type: 'project.changed';
+      kind: 'created' | 'updated' | 'archived' | 'unarchived' | 'deleted';
+      project: ProjectDto;
+    }
+  | {
+      type: 'columns.changed';
+      kind: 'created' | 'updated' | 'deleted' | 'reordered';
+      projectId: Types.ObjectId;
+      columns: ColumnDto[]; // the full, ordered list (event catalog §12.2)
+      movedTaskIds?: string[]; // column delete: tasks that moved to the target column
+    };
 
 export type DomainEventType = DomainEvent['type'];

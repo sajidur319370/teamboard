@@ -33,12 +33,33 @@ const PROBES: Probe[] = [
   { route: 'GET /invites' },
   { route: 'POST /invites', body: () => ({ role: 'viewer' }) },
   { route: 'DELETE /invites/:inviteId' },
+  // Day 8: projects, columns, labels
+  { route: 'GET /projects' },
+  { route: 'POST /projects', body: () => ({ name: 'Pwned', key: 'PWN' }) },
+  { route: 'GET /projects/:key' },
+  { route: 'PATCH /projects/:key', body: () => ({ name: 'pwned' }) },
+  { route: 'POST /projects/:key/archive' },
+  { route: 'POST /projects/:key/unarchive' },
+  { route: 'DELETE /projects/:key', body: (t) => ({ confirmKey: t.b.project.key }) },
+  { route: 'POST /projects/:key/columns', body: () => ({ name: 'Pwned', category: 'todo' }) },
+  {
+    route: 'PUT /projects/:key/columns/order',
+    body: (t) => ({ columnIds: [...t.b.project.columns].reverse().map((c) => c.id) }),
+  },
+  { route: 'PATCH /projects/:key/columns/:columnId', body: () => ({ name: 'pwned' }) },
+  { route: 'DELETE /projects/:key/columns/:columnId' },
+  { route: 'POST /projects/:key/labels', body: () => ({ name: 'Pwned', color: 'red' }) },
+  { route: 'PATCH /projects/:key/labels/:labelId', body: () => ({ name: 'pwned' }) },
+  { route: 'DELETE /projects/:key/labels/:labelId' },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */
 const B_IDS: Record<string, (t: T) => string> = {
   userId: (t) => t.b.member.user.id,
   inviteId: (t) => t.b.inviteId,
+  key: (t) => t.b.project.key,
+  columnId: (t) => t.b.project.columns[0]!.id,
+  labelId: (t) => t.b.label.id,
 };
 
 function request(t: T, probe: Probe, slug: string) {
@@ -93,6 +114,11 @@ describe('cross-tenant isolation', () => {
     ]);
     const invites = await bob.get(`/api/w/${t.b.ws.slug}/invites`);
     expect(invites.body.invites.map((i: { id: string }) => i.id)).toEqual([t.b.inviteId]);
+    const project = await bob.get(`/api/w/${t.b.ws.slug}/projects/${t.b.project.key}`);
+    // Same columns, name and label as created (makeProject ran before the label was added).
+    expect(project.body.project).toEqual({ ...t.b.project, labels: [t.b.label] });
+    const projects = await bob.get(`/api/w/${t.b.ws.slug}/projects`);
+    expect(projects.body.projects.map((p: { key: string }) => p.key)).toEqual(['BEE']);
   });
 
   it("A's lists never contain B's data", async () => {
@@ -108,6 +134,9 @@ describe('cross-tenant isolation', () => {
 
     const invites = await alice.get(`/api/w/${t.a.ws.slug}/invites`);
     expect(invites.body.invites.map((i: { id: string }) => i.id)).toEqual([t.a.inviteId]);
+
+    const projects = await alice.get(`/api/w/${t.a.ws.slug}/projects?archived=true`);
+    expect(projects.body.projects.map((p: { key: string }) => p.key)).toEqual(['AAA']);
   });
 });
 

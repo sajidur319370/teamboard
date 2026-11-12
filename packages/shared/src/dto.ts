@@ -1,5 +1,5 @@
 // Response shapes shared by the API (which builds them) and the web app (which reads them).
-import type { PaletteColor, Role } from './constants';
+import type { ColumnCategory, PaletteColor, Role } from './constants';
 
 export type Id = string;
 
@@ -75,6 +75,41 @@ export interface InvitePreviewDto {
 
 export interface AcceptInviteResponse {
   slug: string;
+}
+
+export interface ColumnDto {
+  id: Id;
+  name: string;
+  category: ColumnCategory;
+  position: number;
+  wipLimit: number | null;
+}
+
+export interface LabelDto {
+  id: Id;
+  name: string;
+  color: PaletteColor;
+}
+
+export interface ProjectDto {
+  id: Id;
+  key: string;
+  name: string;
+  description: string;
+  leadId: Id | null;
+  columns: ColumnDto[]; // sorted by position
+  labels: LabelDto[];
+  archivedAt: string | null;
+}
+
+export interface ProjectListItemDto {
+  id: Id;
+  key: string;
+  name: string;
+  leadId: Id | null;
+  openTasks: number;
+  activeSprint: { id: Id; name: string } | null; // filled in on Day 18
+  archivedAt: string | null;
 }
 
 export interface AuthResponse {

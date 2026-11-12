@@ -1,4 +1,4 @@
-import type { Role, WorkspaceDto } from '@teamboard/shared';
+import type { LabelDto, ProjectDto, Role, WorkspaceDto } from '@teamboard/shared';
 import { as, registerUser } from './auth';
 
 let n = 0;
@@ -39,21 +39,51 @@ export async function addMember(
   return user;
 }
 
-/** Two companies. Use this in EVERY tenant test so leaks show up. */
+export async function makeProject(
+  token: string,
+  ws: WorkspaceDto,
+  key = 'MOB',
+  name = 'Mobile App',
+) {
+  const res = await as(token).post(`/api/w/${ws.slug}/projects`).send({ name, key });
+  if (res.status !== 201) throw new Error(`project failed: ${JSON.stringify(res.body)}`);
+  return res.body.project as ProjectDto;
+}
+
+/** Adds a label and returns the updated project (labels come back on the project). */
+export async function makeLabel(token: string, ws: WorkspaceDto, key: string, name = 'Bug') {
+  const res = await as(token)
+    .post(`/api/w/${ws.slug}/projects/${key}/labels`)
+    .send({ name, color: 'red' });
+  if (res.status !== 201) throw new Error(`label failed: ${JSON.stringify(res.body)}`);
+  return (res.body.labels as LabelDto[]).find((l) => l.name === name)!;
+}
+
+/**
+ * Two companies. Use this in EVERY tenant test so leaks show up.
+ * Their projects have DIFFERENT keys (AAA / BEE): with the same key, "A's slug + B's key"
+ * would find A's own project and the probe would prove nothing.
+ */
 export async function twoTenants() {
-  const make = async (ownerName: string, wsName: string) => {
+  const make = async (ownerName: string, wsName: string, key: string) => {
     const owner = await registerUser(ownerName);
     const ws = await makeWorkspace(owner.token, wsName);
     const member = await addMember(owner.token, ws, 'member', `${wsName} member`);
     const invite = await makeInvite(owner.token, ws, { role: 'viewer' });
-    return { ...owner, ws, member, inviteId: invite.id };
+    const project = await makeProject(owner.token, ws, key, `${wsName} project`);
+    const label = await makeLabel(owner.token, ws, key);
+    return { ...owner, ws, member, inviteId: invite.id, project, label };
   };
-  return { a: await make('Alice', 'A Corp'), b: await make('Bob', 'B Corp') };
+  return {
+    a: await make('Alice', 'A Corp', 'AAA'),
+    b: await make('Bob', 'B Corp', 'BEE'),
+  };
 }
 
 /**
  * One workspace with a user of each role, a spare Viewer ("target") to act on,
- * an outsider with no membership, and an open viewer invite to revoke.
+ * an outsider with no membership, an open viewer invite to revoke,
+ * and project MOB (default columns) with one label.
  */
 export async function makeTeam() {
   const owner = await registerUser('Olivia Owner');
@@ -64,6 +94,20 @@ export async function makeTeam() {
   const target = await addMember(owner.token, ws, 'viewer', 'Tariq Target');
   const outsider = await registerUser('Nadia Nobody');
   const invite = await makeInvite(owner.token, ws, { role: 'viewer' });
-  return { ws, slug: ws.slug, owner, admin, member, viewer, target, outsider, inviteId: invite.id };
+  const project = await makeProject(owner.token, ws, 'MOB');
+  const label = await makeLabel(owner.token, ws, 'MOB');
+  return {
+    ws,
+    slug: ws.slug,
+    owner,
+    admin,
+    member,
+    viewer,
+    target,
+    outsider,
+    inviteId: invite.id,
+    project,
+    label,
+  };
 }
 export type Team = Awaited<ReturnType<typeof makeTeam>>;

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { mount } from './lib/routeRegistry';
 import { invitesRouter } from './modules/invites/invite.routes';
 import { membersRouter, workspaceMemberActions } from './modules/members/member.routes';
+import { projectsRouter } from './modules/projects/project.routes';
 import { workspaceRouter } from './modules/workspaces/workspace.routes';
 
 /**
@@ -17,3 +18,4 @@ mount(tenantRouter, '/', workspaceRouter);
 mount(tenantRouter, '/', workspaceMemberActions);
 mount(tenantRouter, '/members', membersRouter);
 mount(tenantRouter, '/invites', invitesRouter);
+mount(tenantRouter, '/projects', projectsRouter);
