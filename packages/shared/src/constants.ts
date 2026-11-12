@@ -3,6 +3,8 @@
 
 export const ROLES = ['owner', 'admin', 'member', 'viewer'] as const;
 export type Role = (typeof ROLES)[number];
+export const isRole = (v: unknown): v is Role =>
+  typeof v === 'string' && (ROLES as readonly string[]).includes(v);
 
 export const ROLE_LEVEL: Record<Role, number> = {
   owner: 40,

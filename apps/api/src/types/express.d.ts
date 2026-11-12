@@ -1,6 +1,7 @@
-// Extra fields our middleware adds to `req`. More are added on Day 5.
+// Extra fields our middleware adds to `req`.
 // (`req.id` and `req.log` come from pino-http's own type augmentation.)
 import type { Types } from 'mongoose';
+import type { Ctx } from './ctx';
 
 declare global {
   namespace Express {
@@ -11,6 +12,8 @@ declare global {
       userId: Types.ObjectId;
       /** Set by authenticate: the session (refresh token document) this access token belongs to. */
       sessionId: string;
+      /** Set by resolveWorkspace. Only present on /api/w/:slug routes. */
+      ctx: Ctx;
     }
   }
 }

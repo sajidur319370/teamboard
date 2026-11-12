@@ -4,6 +4,7 @@ import { User } from '../../db/models';
 import { notFound } from '../../lib/errors';
 import { validate, valid } from '../../middleware/validate';
 import { changePassword } from '../auth/auth.service';
+import { listMyWorkspaces } from '../workspaces/workspace.service';
 import { toUserDto } from './user.dto';
 
 export const meRouter = Router(); // mounted behind `authenticate`
@@ -11,7 +12,10 @@ export const meRouter = Router(); // mounted behind `authenticate`
 meRouter.get('/', async (req, res) => {
   const user = await User.findById(req.userId).lean();
   if (!user) throw notFound();
-  res.json({ user: toUserDto(user), workspaces: [] } satisfies MeResponse); // workspaces arrive on Day 5
+  res.json({
+    user: toUserDto(user),
+    workspaces: await listMyWorkspaces(req.userId),
+  } satisfies MeResponse);
 });
 
 const updateReq = { body: updateMeSchema };

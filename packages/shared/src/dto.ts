@@ -17,6 +17,25 @@ export interface WorkspaceSummaryDto {
   slug: string;
   role: Role;
 }
+export interface WorkspaceSettingsDto {
+  timezone: string;
+  weekStartsOn: number; // 0 = Sunday
+  workingDays: number[];
+}
+
+export interface WorkspaceDto {
+  id: Id;
+  name: string;
+  slug: string;
+  ownerId: Id;
+  settings: WorkspaceSettingsDto;
+}
+
+export interface WorkspaceResponse {
+  workspace: WorkspaceDto;
+  role: Role;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: UserDto;

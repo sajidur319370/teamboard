@@ -21,7 +21,13 @@ export function toAppError(err: unknown): AppError {
     return badRequest(
       'VALIDATION_ERROR',
       'Some fields are invalid.',
-      err.issues.map((i) => ({ field: i.path.join('.'), issue: i.code, message: i.message })),
+      err.issues.map((i) => ({
+        field: i.path.join('.'),
+        // A custom refine can name its own code, e.g. params: { code: 'SLUG_RESERVED' }
+        issue:
+          (i.code === 'custom' && typeof i.params?.code === 'string' && i.params.code) || i.code,
+        message: i.message,
+      })),
     );
   }
   if (err instanceof mongoose.Error.CastError) return badRequest('INVALID_ID', 'Invalid id.');
