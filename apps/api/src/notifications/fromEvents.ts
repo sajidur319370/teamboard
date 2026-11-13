@@ -79,6 +79,20 @@ export async function itemsFor(ctx: Ctx, e: DomainEvent): Promise<NotifyItem[]> 
         taskId: oid(e.taskId),
       })); // N3: reporter, assignees, earlier commenters
     }
+    case 'sprint.changed': {
+      if (e.kind !== 'started' && e.kind !== 'completed') return [];
+      const data: NotificationData = {
+        sprintName: e.sprint.name,
+        ...(e.projectKey && { projectKey: e.projectKey }),
+      };
+      return (e.assigneeIds ?? []).map((userId) => ({
+        userId,
+        type: e.kind === 'started' ? ('sprint.started' as const) : ('sprint.completed' as const),
+        data,
+        projectId: e.projectId,
+        sprintId: oid(e.sprint.id),
+      })); // N9: assignees of the sprint's tasks
+    }
     case 'member.roleChanged':
       return [
         { userId: e.member.userId, type: 'member.role_changed', data: { role: e.member.role } },

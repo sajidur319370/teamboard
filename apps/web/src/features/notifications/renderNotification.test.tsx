@@ -57,6 +57,9 @@ describe('notificationTarget (FR-NTF-07) / badge (FR-NTF-06)', () => {
       '/w/acme/members',
     );
     expect(notificationTarget('acme', make('sprint.started', { sprintName: 'S1' }))).toBeNull();
+    expect(
+      notificationTarget('acme', make('sprint.started', { sprintName: 'S1', projectKey: 'MOB' })),
+    ).toBe('/w/acme/p/MOB/board');
   });
 
   it('caps the badge at 99+', () => {

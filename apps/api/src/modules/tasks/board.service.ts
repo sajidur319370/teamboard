@@ -1,5 +1,7 @@
 import { isPaletteColor, type BoardResponse } from '@teamboard/shared';
-import { CARD_FIELDS, Task, User } from '../../db/models';
+import { CARD_FIELDS, Sprint, Task, User } from '../../db/models';
+import { oid } from '../../lib/ids';
+import { toSprintSummary } from '../sprints/sprint.dto';
 import { notFound } from '../../lib/errors';
 import type { Ctx } from '../../types/ctx';
 import { listMembers } from '../members/member.service';
@@ -20,7 +22,14 @@ export async function loadBoard(
   sprintParam: string,
 ): Promise<BoardResponse> {
   const project = await findProject(ctx, key);
-  const activeSprint = null; // Day 18: Sprint.findOne({ workspaceId, projectId, state: 'active' })
+  const active = await Sprint.findOne({
+    workspaceId: ctx.workspaceId,
+    projectId: project._id,
+    state: 'active',
+  })
+    .select('name number goal startDate endDate projectId')
+    .lean();
+  const activeSprint = active ? toSprintSummary(active) : null;
 
   const filter: Record<string, unknown> = { workspaceId: ctx.workspaceId, projectId: project._id };
   // FR-BRD-07: "active" falls back to "all open tasks" when no sprint is running.
@@ -35,8 +44,19 @@ export async function loadBoard(
       // recent dates in one predicate.
       filter.completedAt = { $not: { $lt: subDays(ctx.now(), RECENT_DONE_DAYS) } };
       break;
-    default:
-      throw notFound(); // Day 18: 'active' with a running sprint, and specific sprint ids
+    case 'active':
+      filter.sprintId = active!._id; // the whole sprint, done cards included
+      break;
+    default: {
+      // A specific sprint (planned or completed) of THIS project; another project's → 404
+      const s = await Sprint.exists({
+        _id: oid(view),
+        workspaceId: ctx.workspaceId,
+        projectId: project._id,
+      });
+      if (!s) throw notFound();
+      filter.sprintId = s._id;
+    }
   }
 
   const tasks = await Task.find(filter).select(CARD_FIELDS).sort({ columnId: 1, rank: 1 }).lean();

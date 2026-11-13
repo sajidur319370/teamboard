@@ -5,7 +5,15 @@ import {
   type ProjectListItemDto,
   type UpdateProjectInput,
 } from '@teamboard/shared';
-import { Activity, Comment, DEFAULT_COLUMNS, Notification, Project, Task } from '../../db/models';
+import {
+  Activity,
+  Comment,
+  DEFAULT_COLUMNS,
+  Notification,
+  Project,
+  Sprint,
+  Task,
+} from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict } from '../../lib/errors';
 import { oid } from '../../lib/ids';
@@ -40,7 +48,17 @@ export async function listProjects(
     { $group: { _id: '$projectId', open: { $sum: 1 } } },
   ]);
   const openBy = new Map(openCounts.map((c) => [String(c._id), c.open]));
-  // Day 18: also load active sprints (queries.md §5.2)
+  // queries.md §5.2: the running sprint of each project, one query
+  const active = await Sprint.find({
+    workspaceId: ctx.workspaceId,
+    projectId: { $in: projects.map((p) => p._id) },
+    state: 'active',
+  })
+    .select('projectId name')
+    .lean();
+  const activeBy = new Map(
+    active.map((s) => [String(s.projectId), { id: String(s._id), name: s.name }]),
+  );
 
   return projects.map((p) => ({
     id: String(p._id),
@@ -48,7 +66,7 @@ export async function listProjects(
     name: p.name,
     leadId: p.leadId ? String(p.leadId) : null,
     openTasks: openBy.get(String(p._id)) ?? 0,
-    activeSprint: null,
+    activeSprint: activeBy.get(String(p._id)) ?? null,
     archivedAt: p.archivedAt?.toISOString() ?? null,
   }));
 }
@@ -197,7 +215,7 @@ export async function deleteProject(ctx: Ctx, key: string, confirmKey: string) {
     await Task.deleteMany(scope, { session });
     await Comment.deleteMany(scope, { session });
     await Notification.deleteMany(scope, { session });
-    // Day 18: Sprint
+    await Sprint.deleteMany(scope, { session });
     await Activity.deleteMany(scope, { session });
     await Project.deleteOne({ _id: p._id, workspaceId: ctx.workspaceId }, { session });
     // Workspace-level (no projectId), so it survives as the record of what was deleted.

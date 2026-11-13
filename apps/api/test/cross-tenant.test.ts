@@ -73,6 +73,21 @@ const PROBES: Probe[] = [
   { route: 'GET /notifications/unread-count' },
   { route: 'POST /notifications/read-all' },
   { route: 'POST /notifications/:notificationId/read' },
+  // Day 18: sprints
+  { route: 'GET /projects/:key/sprints' },
+  {
+    route: 'POST /projects/:key/sprints',
+    body: () => ({ startDate: '2026-11-02', endDate: '2026-11-13' }),
+  },
+  { route: 'GET /projects/:key/backlog' },
+  { route: 'PATCH /sprints/:sprintId', body: () => ({ name: 'pwned' }) },
+  { route: 'DELETE /sprints/:sprintId' },
+  { route: 'POST /sprints/:sprintId/start' },
+  { route: 'POST /sprints/:sprintId/complete', body: () => ({ carryOverTo: 'backlog' }) },
+  {
+    route: 'POST /sprints/:sprintId/tasks',
+    body: (t) => ({ action: 'add', taskIds: [t.b.task.id] }),
+  },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */
@@ -86,6 +101,7 @@ const B_IDS: Record<string, (t: T) => string> = {
   number: (t) => String(t.b.task.number),
   commentId: (t) => t.b.comment.id,
   notificationId: (t) => t.b.notificationId,
+  sprintId: (t) => t.b.sprint.id,
 };
 
 function request(t: T, probe: Probe, slug: string) {
@@ -154,6 +170,9 @@ describe('cross-tenant isolation', () => {
     expect(comments.body.items).toEqual([t.b.comment]); // not edited, not deleted, no new ones
     const unread = await bob.get(`/api/w/${t.b.ws.slug}/notifications/unread-count`);
     expect(unread.body.count).toBeGreaterThan(0); // Alice's read-all / read didn't touch Bob's
+    const sprints = await bob.get(`/api/w/${t.b.ws.slug}/projects/BEE/sprints`);
+    expect(sprints.body.sprints).toEqual([t.b.sprint]); // not renamed, started or deleted
+    expect(board.body.tasks[0].sprintId).toBeNull(); // not pulled into a sprint
   });
 
   it("a feed filtered by B's ids, in A's workspace, is empty (filters can't widen the tenant)", async () => {

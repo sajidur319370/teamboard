@@ -84,6 +84,12 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     s.on('project:updated', onProject);
     s.on('project:archived', onProject);
     s.on('project:deleted', refetchBoard); // the refetch 404s → "this project was deleted"
+    // Sprints (Day 18): the payload has ids only, and the active-sprint view depends on
+    // them, so refetch. The backlog page (Day 19) listens the same way.
+    s.on('tasks:sprintChanged', refetchBoard);
+    s.on('sprint:started', refetchBoard);
+    s.on('sprint:completed', refetchBoard);
+    s.on('sprint:updated', refetchBoard);
     s.on('comment:created', onCommentCreated);
     s.on('comment:updated', onCommentUpdated);
     s.on('comment:deleted', onCommentDeleted);
@@ -103,6 +109,10 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
       s.off('project:updated', onProject);
       s.off('project:archived', onProject);
       s.off('project:deleted', refetchBoard);
+      s.off('tasks:sprintChanged', refetchBoard);
+      s.off('sprint:started', refetchBoard);
+      s.off('sprint:completed', refetchBoard);
+      s.off('sprint:updated', refetchBoard);
       s.off('comment:created', onCommentCreated);
       s.off('comment:updated', onCommentUpdated);
       s.off('comment:deleted', onCommentDeleted);

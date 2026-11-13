@@ -130,6 +130,37 @@ export async function broadcast(ctx: Ctx, e: DomainEvent): Promise<void> {
       });
       break;
 
+    case 'sprint.changed': {
+      const p = { ...base, projectId: String(e.projectId), sprint: e.sprint };
+      const to = board(e.projectId);
+      switch (e.kind) {
+        case 'created':
+          to.emit('sprint:created', p);
+          break;
+        case 'updated':
+          to.emit('sprint:updated', p);
+          break;
+        case 'started':
+          to.emit('sprint:started', p);
+          break;
+        case 'completed':
+          to.emit('sprint:completed', p);
+          break;
+        case 'deleted':
+          to.emit('sprint:deleted', p);
+          break;
+      }
+      break;
+    }
+    case 'tasks.sprintChanged':
+      board(e.projectId).emit('tasks:sprintChanged', {
+        ...base,
+        projectId: String(e.projectId),
+        taskIds: e.taskIds,
+        sprintId: e.sprintId,
+      });
+      break;
+
     case 'project.changed': {
       const p = { ...base, projectId: e.project.id, project: e.project };
       // To the workspace (project lists) AND to the project's own open boards

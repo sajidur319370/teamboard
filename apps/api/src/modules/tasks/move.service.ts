@@ -13,6 +13,7 @@ import { activity } from '../../events/activity';
 import { publish } from '../../events/publish';
 import type { Ctx } from '../../types/ctx';
 import { assertWritable } from '../projects/project.helpers';
+import { activeSprintOf, completionActivity } from '../sprints/sprint.helpers';
 import { colRef, taskRef } from './task.helpers';
 import { toTaskCard } from './task.dto';
 
@@ -187,8 +188,13 @@ export async function moveTask(
             activity(ctx, 'task.moved', { ...ref, from: colRef(fromCol), to: colRef(toCol) }, refs),
           );
         }
-        if (intoDone) acts.push(activity(ctx, 'task.completed', ref, refs)); // Day 18: + sprint deltas
-        if (outOfDone) acts.push(activity(ctx, 'task.reopened', ref, refs));
+        if (intoDone || outOfDone) {
+          // Burndown (data-model.md §12): deltas only if the task is in the ACTIVE sprint.
+          // Read (and locked) inside this transaction, so a sprint start/complete can't
+          // interleave with this completion (D10).
+          const sprint = await activeSprintOf(ctx, t.sprintId, session);
+          acts.push(completionActivity(ctx, t, ref.task, refs, intoDone, sprint));
+        }
         if (acts.length) await Activity.insertMany(acts, { session });
         return t;
       });

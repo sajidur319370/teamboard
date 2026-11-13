@@ -5,6 +5,7 @@ import type {
   MemberDto,
   ProjectDto,
   Role,
+  SprintDto,
   TaskCardDto,
   TaskRef,
 } from '@teamboard/shared';
@@ -65,6 +66,20 @@ export type DomainEvent =
       task: TaskRef;
     }
   | { type: 'comment.updated'; projectId: Types.ObjectId; comment: CommentDto }
+  | {
+      type: 'sprint.changed';
+      kind: 'created' | 'updated' | 'started' | 'completed' | 'deleted';
+      projectId: Types.ObjectId;
+      sprint: SprintDto;
+      projectKey?: string; // started/completed: for the N9 notification
+      assigneeIds?: string[]; // started/completed: N9 recipients
+    }
+  | {
+      type: 'tasks.sprintChanged';
+      projectId: Types.ObjectId;
+      taskIds: string[];
+      sprintId: string | null;
+    }
   | {
       type: 'comment.deleted';
       projectId: Types.ObjectId;

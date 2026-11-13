@@ -11,4 +11,5 @@ export * from './schemas/project';
 export * from './schemas/task';
 export * from './schemas/comment';
 export * from './schemas/notification';
+export * from './schemas/sprint';
 export * from './activity';

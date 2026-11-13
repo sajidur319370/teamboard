@@ -73,6 +73,7 @@ export function notificationTarget(slug: string, n: NotificationDto): string | n
     return `/w/${slug}/members`;
   }
   if (n.type === 'invite.accepted') return `/w/${slug}/members`;
+  if (n.data.projectKey) return `/w/${slug}/p/${n.data.projectKey}/board`; // sprint news
   return null;
 }
 

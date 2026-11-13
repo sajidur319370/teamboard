@@ -3,6 +3,7 @@ import type {
   LabelDto,
   ProjectDto,
   Role,
+  SprintDto,
   TaskDto,
   WorkspaceDto,
 } from '@teamboard/shared';
@@ -40,6 +41,20 @@ export async function firstNotificationId(token: string, ws: WorkspaceDto) {
   const id = (res.body.items as { id: string }[] | undefined)?.[0]?.id;
   if (!id) throw new Error(`no notification: ${JSON.stringify(res.body)}`);
   return id;
+}
+
+/** Creates a planned sprint through the API (POST /projects/:key/sprints). */
+export async function makeSprint(
+  token: string,
+  ws: WorkspaceDto,
+  key: string,
+  body: Record<string, unknown> = {},
+) {
+  const res = await as(token)
+    .post(`/api/w/${ws.slug}/projects/${key}/sprints`)
+    .send({ startDate: '2026-11-02', endDate: '2026-11-13', ...body });
+  if (res.status !== 201) throw new Error(`sprint failed: ${JSON.stringify(res.body)}`);
+  return res.body.sprint as SprintDto;
 }
 
 let n = 0;
@@ -117,6 +132,7 @@ export async function twoTenants() {
     const comment = await makeComment(owner.token, ws, task.id, `${wsName} comment`);
     // The member joining via the owner's invite notified the owner (N7)
     const notificationId = await firstNotificationId(owner.token, ws);
+    const sprint = await makeSprint(owner.token, ws, key);
     return {
       ...owner,
       ws,
@@ -127,6 +143,7 @@ export async function twoTenants() {
       task,
       comment,
       notificationId,
+      sprint,
     };
   };
   return {
@@ -173,6 +190,7 @@ export async function makeTeam() {
     comment,
     // The OWNER's (invite accepted, N7): other roles reading it get 404, never 403.
     notificationId: await firstNotificationId(owner.token, ws),
+    sprint: await makeSprint(owner.token, ws, 'MOB'), // planned
   };
 }
 export type Team = Awaited<ReturnType<typeof makeTeam>>;

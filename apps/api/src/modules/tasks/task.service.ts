@@ -20,6 +20,13 @@ import type { Ctx } from '../../types/ctx';
 import { assertWritable, findProject } from '../projects/project.helpers';
 import { assertAssignees, assertLabels, colRef, sameIdSet, taskRef } from './task.helpers';
 import { toTaskCard, toTaskDto } from './task.dto';
+import {
+  activeSprintOf,
+  assertSprintForTask,
+  pointsDeltas,
+  sprintScopeActivity,
+  touchSprint,
+} from '../sprints/sprint.helpers';
 
 const uniq = (ids: Types.ObjectId[]) => [...new Map(ids.map((i) => [String(i), i])).values()];
 
@@ -38,7 +45,8 @@ export async function createTask(ctx: Ctx, key: string, input: CreateTaskInput):
   const labelIds = (input.labelIds ?? []).map(oid);
   await assertAssignees(ctx, assigneeIds);
   assertLabels(p0, labelIds);
-  if (input.sprintId) throw badRequest('INVALID_SPRINT', 'Sprints arrive on Day 18.'); // Day 18
+  const sprintId = input.sprintId ? oid(input.sprintId) : null;
+  if (sprintId) await assertSprintForTask(ctx, p0._id, sprintId); // before taking a number
 
   // 2. Next number: atomic $inc, OUTSIDE the transaction, so 50 parallel creates don't all
   //    write-conflict on the project document (AC-TSK-01). A later failure leaves a gap (BR-05).
@@ -70,6 +78,10 @@ export async function createTask(ctx: Ctx, key: string, input: CreateTaskInput):
     const rank = uniqueKeyAfter(last?.rank ?? null, p.taskCounter);
 
     return withTransaction(async (session) => {
+      // Lock + re-check: the sprint may have been completed/deleted since (or be starting).
+      const sprint = sprintId
+        ? await touchSprint(ctx, sprintId, ['planned', 'active'], session)
+        : null;
       const [t] = await Task.create(
         [
           {
@@ -87,13 +99,13 @@ export async function createTask(ctx: Ctx, key: string, input: CreateTaskInput):
             dueDate: input.dueDate ?? null,
             labelIds,
             storyPoints: input.storyPoints ?? null,
-            sprintId: null,
+            sprintId,
             completedAt: column.category === 'done' ? ctx.now() : null, // BR-07
           },
         ],
         { session },
       );
-      await Activity.create(
+      await Activity.insertMany(
         [
           activity(
             ctx,
@@ -101,6 +113,10 @@ export async function createTask(ctx: Ctx, key: string, input: CreateTaskInput):
             { task: taskRef(t!, p), column: colRef(column) },
             { projectId: p._id, taskId: t!._id },
           ),
+          // Created straight into the running sprint = added to its scope (FR-SPR-07).
+          ...(sprint?.state === 'active'
+            ? [sprintScopeActivity(ctx, t!, p.key, p._id, sprint, 1)]
+            : []),
         ],
         { session },
       );
@@ -217,12 +233,31 @@ export async function updateTask(ctx: Ctx, taskId: Types.ObjectId, input: Update
 
       const ref = { task: taskRef(t, project) };
       const refs = { projectId: t.projectId, taskId: t._id };
+      // D6: a story-point change in the ACTIVE sprint carries burndown deltas (+ sprintId).
+      const sprint = fields.includes('storyPoints')
+        ? await activeSprintOf(ctx, t.sprintId, session)
+        : null;
       const acts = fields
         .filter((f) => f !== 'assigneeIds')
         .map((f) =>
-          activity(ctx, 'task.updated', { ...ref, ...changeMeta(f, current[f], changes[f]) }, refs),
+          f === 'storyPoints' && sprint
+            ? activity(
+                ctx,
+                'task.updated',
+                {
+                  ...ref,
+                  ...changeMeta(f, current[f], changes[f]),
+                  ...pointsDeltas(current.storyPoints, t.storyPoints, !!t.completedAt),
+                },
+                { ...refs, sprintId: sprint._id },
+              )
+            : activity(
+                ctx,
+                'task.updated',
+                { ...ref, ...changeMeta(f, current[f], changes[f]) },
+                refs,
+              ),
         );
-      // Day 18: a storyPoints change in an ACTIVE sprint carries scopeDelta/doneDelta (D6)
       for (const id of assigned) {
         acts.push(activity(ctx, 'task.assigned', { ...ref, user: names.get(String(id))! }, refs));
       }
@@ -280,9 +315,14 @@ export async function deleteTask(ctx: Ctx, taskId: Types.ObjectId) {
     // here) or finds no task (404). No orphans either way.
     await Comment.deleteMany({ workspaceId: ctx.workspaceId, taskId }, { session });
     await Notification.deleteMany({ workspaceId: ctx.workspaceId, taskId }, { session }); // dead links
-    // Day 18: scope delta (D9)
-    await Activity.create(
+    // D9: leaving the ACTIVE sprint by deletion is a scope change, or the burndown would
+    // keep counting a task that no longer exists. Locked: can't interleave with a start.
+    const sprint = await activeSprintOf(ctx, deleted.sprintId, session);
+    await Activity.insertMany(
       [
+        ...(sprint
+          ? [sprintScopeActivity(ctx, deleted, p.key, deleted.projectId, sprint, -1)]
+          : []),
         activity(
           ctx,
           'task.deleted',

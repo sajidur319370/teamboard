@@ -1,5 +1,12 @@
 // Response shapes shared by the API (which builds them) and the web app (which reads them).
-import type { ColumnCategory, NotificationType, PaletteColor, Priority, Role } from './constants';
+import type {
+  ColumnCategory,
+  NotificationType,
+  PaletteColor,
+  Priority,
+  Role,
+  SprintState,
+} from './constants';
 
 export type Id = string;
 
@@ -245,4 +252,34 @@ export interface NotificationDto {
   data: NotificationData;
   readAt: string | null;
   createdAt: string;
+}
+
+export interface SprintScopeDto {
+  totalTasks: number;
+  totalPoints: number;
+  doneTasks: number; // already done when the sprint started (D4)
+  donePoints: number;
+}
+
+export interface SprintDto {
+  id: Id;
+  projectId: Id;
+  number: number;
+  name: string;
+  goal: string;
+  state: SprintState;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  /** The snapshot taken at start (FR-SPR-06); null while planned. */
+  scope: SprintScopeDto | null;
+}
+
+/** GET /projects/:key/backlog (FR-SPR-03): open tasks, grouped. */
+export interface BacklogResponse {
+  /** Active first, then planned by start date. */
+  sprints: { sprint: SprintDto; tasks: TaskCardDto[] }[];
+  /** sprintId = null, by priority then creation. */
+  backlog: TaskCardDto[];
 }

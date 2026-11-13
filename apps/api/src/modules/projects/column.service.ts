@@ -10,6 +10,8 @@ import { Activity, Project, Task } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { tenantBulkWrite } from '../../db/tenantBulkWrite';
 import { badRequest, conflict, notFound } from '../../lib/errors';
+import { oid } from '../../lib/ids';
+import { activeSprintOf, completionActivity } from '../sprints/sprint.helpers';
 import { activity } from '../../events/activity';
 import { publish } from '../../events/publish';
 import type { Ctx } from '../../types/ctx';
@@ -46,28 +48,44 @@ async function columnsChanged(
 /**
  * FR-BRD-06: tasks crossing into / out of a `done` column get completedAt set / cleared,
  * plus one task.completed / task.reopened activity each, so reports stay correct.
- * Day 18 adds sprintId + burndown deltas when the task is in the active sprint.
+ * Tasks in the ACTIVE sprint also get sprintId + burndown deltas (data-model.md §12).
  */
 async function writeCompletionChanges(
   ctx: Ctx,
   p: ProjectLean,
-  tasks: { _id: Types.ObjectId; number: number; title: string }[],
+  tasks: CompletionTask[],
   intoDone: boolean,
   session: ClientSession,
 ) {
   if (tasks.length === 0) return;
+  // One lock per distinct sprint (in practice: at most one active + some planned/completed).
+  const active = new Map<string, Awaited<ReturnType<typeof activeSprintOf>>>();
+  for (const id of new Set(tasks.flatMap((t) => (t.sprintId ? [String(t.sprintId)] : [])))) {
+    active.set(id, await activeSprintOf(ctx, oid(id), session));
+  }
   await Activity.insertMany(
     tasks.map((t) =>
-      activity(
+      completionActivity(
         ctx,
-        intoDone ? 'task.completed' : 'task.reopened',
-        { task: { number: t.number, title: t.title, key: p.key } },
+        t,
+        { number: t.number, title: t.title, key: p.key },
         { projectId: p._id, taskId: t._id },
+        intoDone,
+        t.sprintId ? (active.get(String(t.sprintId)) ?? null) : null,
       ),
     ),
     { session },
   );
 }
+
+type CompletionTask = {
+  _id: Types.ObjectId;
+  number: number;
+  title: string;
+  storyPoints?: number | null;
+  sprintId?: Types.ObjectId | null;
+};
+const COMPLETION_FIELDS = '_id number title storyPoints sprintId';
 
 export async function addColumn(ctx: Ctx, key: string, input: CreateColumnInput) {
   const p = await findProject(ctx, key);
@@ -183,7 +201,7 @@ export async function updateColumn(
     if (!intoDone && !outOfDone) return;
 
     const scope = { workspaceId: ctx.workspaceId, projectId: p._id, columnId };
-    const affected = await Task.find(scope).select('_id number title').session(session).lean();
+    const affected = await Task.find(scope).select(COMPLETION_FIELDS).session(session).lean();
     await Task.updateMany(
       scope,
       { $set: { completedAt: intoDone ? ctx.now() : null }, $inc: { version: 1 } },
@@ -231,7 +249,7 @@ export async function deleteColumn(
     // Counted INSIDE the transaction, after the CAS, so the answer matches what we delete.
     const tasks = await Task.find({ workspaceId: ctx.workspaceId, projectId: p._id, columnId })
       .sort({ rank: 1, _id: 1 })
-      .select('_id number title')
+      .select(COMPLETION_FIELDS)
       .session(session)
       .lean();
     if (tasks.length > 0 && !target) {

@@ -10,7 +10,7 @@ export type ColumnRef = { columnId: Id; name: string };
 /** `name` is a snapshot; rows written before Day 16 only have the id. */
 export type UserRef = { id: Id; name?: string };
 type Delta = { count: number; points: number };
-type BurndownDelta = { scopeDelta: Delta; doneDelta: Delta }; // Day 18
+export type BurndownDelta = { scopeDelta: Delta; doneDelta: Delta }; // data-model.md §12
 type SprintRef = { name: string; number: number };
 type OnTask = { task: TaskRef };
 
@@ -52,7 +52,7 @@ export interface ActivityMetadataMap {
   'comment.deleted': Partial<OnTask>;
   'sprint.created': { sprint: SprintRef };
   'sprint.started': { sprint: SprintRef };
-  'sprint.completed': { sprint: SprintRef };
+  'sprint.completed': { sprint: SprintRef; completedTasks?: number; carriedOverTasks?: number };
   'sprint.deleted': { sprint: SprintRef };
 }
 

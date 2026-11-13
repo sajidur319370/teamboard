@@ -9,6 +9,7 @@ import type {
   MemberDto,
   NotificationDto,
   ProjectDto,
+  SprintDto,
   TaskCardDto,
 } from './dto';
 
@@ -39,6 +40,13 @@ export interface ServerToClientEvents {
   'comment:created': E<{ comment: CommentDto; taskId: Id; commentCount: number }>;
   'comment:updated': E<{ comment: CommentDto }>;
   'comment:deleted': E<{ commentId: Id; taskId: Id; commentCount: number }>;
+  'sprint:created': E<{ sprint: SprintDto }>;
+  'sprint:updated': E<{ sprint: SprintDto }>;
+  'sprint:started': E<{ sprint: SprintDto }>;
+  'sprint:completed': E<{ sprint: SprintDto }>;
+  'sprint:deleted': E<{ sprint: SprintDto }>;
+  /** Tasks joined or left a sprint (backlog moves, carry-over): refetch the views. */
+  'tasks:sprintChanged': E<{ taskIds: Id[]; sprintId: Id | null }>;
   // workspace:<id> (and the project's own board room)
   'project:created': E<{ project: ProjectDto }>;
   'project:updated': E<{ project: ProjectDto }>;
@@ -58,7 +66,6 @@ export interface ServerToClientEvents {
   }) => void;
   /** Marked read in one tab: the bell in the user's OTHER tabs follows (not in the catalog). */
   'notification:read': (p: { workspaceId: Id; unreadCount: number }) => void;
-  // Day 18: sprint:*, tasks:sprintChanged
 }
 
 export type Ack = { ok: true } | { ok: false; code: string };
