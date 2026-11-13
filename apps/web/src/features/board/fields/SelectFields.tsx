@@ -9,14 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PRIORITY_ICON } from '../TaskCard';
-
-const PRIORITY_LABEL: Record<Priority, string> = {
-  urgent: 'Urgent',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  none: 'None',
-};
+import { PRIORITY_LABEL } from '@/lib/format';
 
 export function PriorityField(props: {
   value: Priority;

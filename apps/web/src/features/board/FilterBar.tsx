@@ -1,5 +1,5 @@
 import { ChevronDownIcon, LayoutListIcon, UserIcon, XIcon } from 'lucide-react';
-import { PRIORITIES, type Priority } from '@teamboard/shared';
+import { PRIORITIES } from '@teamboard/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { LABEL_DOT } from '@/lib/colors';
+import { PRIORITY_LABEL } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useUi } from '@/stores/ui';
 import { useBoardCtx } from './BoardContext';
@@ -18,14 +19,6 @@ import { PRIORITY_ICON } from './TaskCard';
 import { useBoardFilters } from './useBoardFilters';
 
 const ANY = '__any'; // Radix Select items can't use '' as a value
-
-const PRIORITY_LABEL: Record<Priority, string> = {
-  urgent: 'Urgent',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-  none: 'None',
-};
 
 /** Filters live in the URL (FR-UI): they survive reloads and can be shared. */
 export function FilterBar({ shown, total }: { shown: number; total: number }) {

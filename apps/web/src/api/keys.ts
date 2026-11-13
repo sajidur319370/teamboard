@@ -1,3 +1,8 @@
+import type { ActivityQuery } from '@teamboard/shared';
+
+/** The feed filters that go into the URL and the cache key (not the cursor/limit). */
+export type ActivityFilter = Pick<ActivityQuery, 'projectId' | 'taskId' | 'actorId' | 'group'>;
+
 /**
  * Every TanStack Query cache key lives here.
  * Every workspace key starts with ['w', slug], so invalidating ['w', slug] refetches
@@ -17,4 +22,8 @@ export const qk = {
   board: (slug: string, key: string, sprint: string) => ['w', slug, 'board', key, sprint] as const,
   task: (slug: string, key: string, number: number) => ['w', slug, 'task', key, number] as const,
   myTasks: (slug: string) => ['w', slug, 'my-tasks'] as const,
+  comments: (slug: string, taskId: string) => ['w', slug, 'comments', taskId] as const,
+  /** Prefix of every feed (task / project / workspace, any filter), for invalidation. */
+  activityAll: (slug: string) => ['w', slug, 'activity'] as const,
+  activity: (slug: string, filter: ActivityFilter) => ['w', slug, 'activity', filter] as const,
 };

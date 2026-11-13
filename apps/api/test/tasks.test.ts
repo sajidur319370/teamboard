@@ -277,7 +277,7 @@ describe('update task', () => {
       reporterId: t.member.user.id,
       columnId: t.project.columns[0]!.id,
       completedAt: null,
-      commentCount: 0,
+      commentCount: 1, // the fixture comment, not the 1000 sent
       version: 2,
     });
     // Only protected fields → nothing to update → 400

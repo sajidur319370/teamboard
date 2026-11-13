@@ -193,3 +193,34 @@ export interface MeResponse {
   workspaces: WorkspaceSummaryDto[];
 }
 // More DTOs are added day by day.
+
+/** Who did or wrote something, hydrated in one query per page (no N+1). */
+export interface PersonRef {
+  id: Id;
+  name: string; // "Former user" when the account is gone
+  avatarColor: PaletteColor;
+}
+
+/** Cursor pagination on (createdAt, _id): `nextCursor` is null on the last page. */
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+export interface CommentDto {
+  id: Id;
+  taskId: Id;
+  author: PersonRef;
+  body: string; // Markdown, rendered with SafeMarkdown
+  editedAt: string | null;
+  createdAt: string;
+}
+
+/** POST /tasks/:taskId/comments and DELETE /comments/:id return the task's new count. */
+export interface CreateCommentResponse {
+  comment: CommentDto;
+  commentCount: number;
+}
+export interface DeleteCommentResponse {
+  commentCount: number;
+}

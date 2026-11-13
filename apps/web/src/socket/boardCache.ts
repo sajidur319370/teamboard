@@ -45,3 +45,16 @@ export const applyRanks = (board: BoardResponse, ranks: Record<string, string>):
     ranks[t.id] ? { ...t, rank: ranks[t.id]!, version: t.version + 1 } : t,
   ),
 });
+
+/**
+ * comment:created / comment:deleted carry the task's NEW total: set it, don't add. No version
+ * bump: the server didn't bump it either (a comment isn't a task edit).
+ */
+export const setCommentCount = (
+  board: BoardResponse,
+  taskId: string,
+  commentCount: number,
+): BoardResponse =>
+  board.tasks.some((t) => t.id === taskId && t.commentCount !== commentCount)
+    ? { ...board, tasks: board.tasks.map((t) => (t.id === taskId ? { ...t, commentCount } : t)) }
+    : board;

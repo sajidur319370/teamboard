@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
-import { ArchiveIcon, SettingsIcon } from 'lucide-react';
+import { ActivityIcon, ArchiveIcon, SettingsIcon } from 'lucide-react';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,8 +96,13 @@ export function BoardPage() {
                 <ArchiveIcon className="size-3.5" /> Archived: read-only
               </span>
             )}
+            <Button asChild variant="ghost" size="sm" className="ml-auto">
+              <Link to={`/w/${slug}/p/${project.key}/activity`}>
+                <ActivityIcon /> Activity
+              </Link>
+            </Button>
             <Can perm="project:update">
-              <Button asChild variant="ghost" size="sm" className="ml-auto">
+              <Button asChild variant="ghost" size="sm">
                 <Link to={`/w/${slug}/p/${project.key}/settings`}>
                   <SettingsIcon /> Settings
                 </Link>

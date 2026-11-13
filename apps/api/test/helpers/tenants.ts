@@ -1,4 +1,11 @@
-import type { LabelDto, ProjectDto, Role, TaskDto, WorkspaceDto } from '@teamboard/shared';
+import type {
+  CommentDto,
+  LabelDto,
+  ProjectDto,
+  Role,
+  TaskDto,
+  WorkspaceDto,
+} from '@teamboard/shared';
 import { as, registerUser } from './auth';
 
 /** Creates a task through the API (POST /projects/:key/tasks). */
@@ -13,6 +20,18 @@ export async function makeTask(
     .send({ title: 'A task', ...body });
   if (res.status !== 201) throw new Error(`task failed: ${JSON.stringify(res.body)}`);
   return res.body.task as TaskDto;
+}
+
+/** Adds a comment through the API (POST /tasks/:taskId/comments). */
+export async function makeComment(
+  token: string,
+  ws: WorkspaceDto,
+  taskId: string,
+  body = 'A comment',
+) {
+  const res = await as(token).post(`/api/w/${ws.slug}/tasks/${taskId}/comments`).send({ body });
+  if (res.status !== 201) throw new Error(`comment failed: ${JSON.stringify(res.body)}`);
+  return res.body.comment as CommentDto;
 }
 
 let n = 0;
@@ -87,7 +106,8 @@ export async function twoTenants() {
     const project = await makeProject(owner.token, ws, key, `${wsName} project`);
     const label = await makeLabel(owner.token, ws, key);
     const task = await makeTask(owner.token, ws, key, { title: `${wsName} task` });
-    return { ...owner, ws, member, inviteId: invite.id, project, label, task };
+    const comment = await makeComment(owner.token, ws, task.id, `${wsName} comment`);
+    return { ...owner, ws, member, inviteId: invite.id, project, label, task, comment };
   };
   return {
     a: await make('Alice', 'A Corp', 'AAA'),
@@ -114,6 +134,9 @@ export async function makeTeam() {
   // Reported by the MEMBER: members may delete only their own tasks (FR-TSK-05), so the
   // RBAC matrix can expect "not 403" for every role that has task:delete.
   const task = await makeTask(member.token, ws, 'MOB', { title: 'Fixture task' });
+  // By the MEMBER too: only authors (and Admin+) may delete, so every allowed role gets a
+  // non-403 (the member deletes it, admin/owner then get 404).
+  const comment = await makeComment(member.token, ws, task.id, 'Fixture comment');
   return {
     ws,
     slug: ws.slug,
@@ -127,6 +150,7 @@ export async function makeTeam() {
     project,
     label,
     task,
+    comment,
   };
 }
 export type Team = Awaited<ReturnType<typeof makeTeam>>;

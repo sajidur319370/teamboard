@@ -87,13 +87,17 @@ describe('activities', () => {
   });
 
   it('keep the createdAt from ctx.now(), so history can be backdated (seed script)', async () => {
-    const [doc] = await Activity.create([activity(ctx, 'workspace.updated')]);
+    const [doc] = await Activity.create([activity(ctx, 'workspace.updated', { changes: {} })]);
     expect(doc!.createdAt.toISOString()).toBe('2026-01-05T10:00:00.000Z');
   });
 
   it('map the action prefix to an entity type', () => {
-    expect(activity(ctx, 'ownership.transferred').entityType).toBe('workspace');
-    expect(activity(ctx, 'member.joined').entityType).toBe('membership');
-    expect(activity(ctx, 'column.created').entityType).toBe('project');
+    expect(activity(ctx, 'ownership.transferred', { from: 'a', to: 'b' }).entityType).toBe(
+      'workspace',
+    );
+    expect(activity(ctx, 'member.joined', { role: 'member' }).entityType).toBe('membership');
+    expect(activity(ctx, 'column.created', { name: 'QA', category: 'todo' }).entityType).toBe(
+      'project',
+    );
   });
 });

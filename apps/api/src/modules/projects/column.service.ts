@@ -171,7 +171,7 @@ export async function updateColumn(
       { arrayFilters: [{ 'c._id': columnId }], session },
     );
     if (res.modifiedCount === 0) throw boardChanged();
-    if (rename) {
+    if (rename && input.name !== undefined) {
       await Activity.create(
         [activity(ctx, 'column.renamed', { from: col.name, to: input.name }, { projectId: p._id })],
         { session },

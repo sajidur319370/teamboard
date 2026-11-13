@@ -11,6 +11,7 @@ import { Activity, Membership, User, Workspace } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { verifyPassword } from '../../lib/password';
+import { userRef, userRefs } from '../../lib/people';
 import { activity } from '../../events/activity';
 import { publish } from '../../events/publish';
 import type { Ctx } from '../../types/ctx';
@@ -93,6 +94,7 @@ export async function changeRole(ctx: Ctx, targetUserId: Types.ObjectId, newRole
     throw forbidden('ROLE_CEILING', "You can't change the role of someone at or above your level."); // FR-RBAC-01
   }
   if (from === newRole) return memberDto(ctx, targetUserId); // no-op: no activity, no event
+  const user = await userRef(targetUserId); // name snapshot (FR-ACT-04)
 
   await withTransaction(async (session) => {
     // Ceiling INSIDE the filter: atomic even if someone else promotes the target meanwhile.
@@ -105,7 +107,7 @@ export async function changeRole(ctx: Ctx, targetUserId: Types.ObjectId, newRole
     await Activity.create(
       [
         activity(ctx, 'member.role_changed', {
-          user: { id: String(targetUserId) },
+          user,
           from,
           to: newRole,
         }),
@@ -124,6 +126,7 @@ export async function removeMember(ctx: Ctx, targetUserId: Types.ObjectId) {
     throw badRequest('USE_LEAVE', 'Use "Leave workspace" instead.');
   }
   await targetOr404(ctx, targetUserId);
+  const user = await userRef(targetUserId); // the feed still names them after they're gone
 
   await withTransaction(async (session) => {
     const removed = await Membership.findOneAndDelete(
@@ -134,10 +137,9 @@ export async function removeMember(ctx: Ctx, targetUserId: Types.ObjectId) {
       // Exists (we checked) but not below me: Admin vs Admin, anyone vs Owner (BR-03, BR-04).
       throw forbidden('ROLE_CEILING', "You can't remove someone at or above your level.");
     }
-    await Activity.create(
-      [activity(ctx, 'member.removed', { user: { id: String(targetUserId) }, role: removed.role })],
-      { session },
-    );
+    await Activity.create([activity(ctx, 'member.removed', { user, role: removed.role })], {
+      session,
+    });
   });
   await publish(ctx, [{ type: 'member.removed', userId: targetUserId, reason: 'removed' }]);
 }
@@ -162,6 +164,8 @@ export async function transferOwnership(ctx: Ctx, targetUserId: Types.ObjectId, 
   if (!me || !(await verifyPassword(password, me.passwordHash))) {
     throw badRequest('WRONG_PASSWORD', 'Incorrect password.');
   }
+
+  const refs = await userRefs([ctx.userId, targetUserId]);
 
   await withTransaction(async (session) => {
     // 1. Demote FIRST: the partial unique index "one_owner_per_workspace" is checked per statement.
@@ -190,8 +194,8 @@ export async function transferOwnership(ctx: Ctx, targetUserId: Types.ObjectId, 
     await Activity.create(
       [
         activity(ctx, 'ownership.transferred', {
-          from: String(ctx.userId),
-          to: String(targetUserId),
+          from: refs.get(String(ctx.userId))!,
+          to: refs.get(String(targetUserId))!,
         }),
       ],
       { session },

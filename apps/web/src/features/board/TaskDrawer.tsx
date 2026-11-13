@@ -13,6 +13,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActivityFeed } from '@/features/activity/ActivityFeed';
+import { CommentsSection } from '@/features/comments/CommentsSection';
 import { useMe } from '@/features/auth/useMe';
 import { useCan, useWorkspace } from '@/features/workspace/WorkspaceContext';
 import { shortDate } from '@/lib/format';
@@ -150,7 +153,26 @@ export function TaskDrawer() {
               )}
             </section>
 
-            {/* Day 16: <CommentsSection /> and <TaskHistory /> */}
+            <Tabs defaultValue="comments" className="mt-6 px-4">
+              <TabsList>
+                <TabsTrigger value="comments">
+                  Comments{t.commentCount > 0 && ` (${t.commentCount})`}
+                </TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+              <TabsContent value="comments" className="pt-2">
+                <CommentsSection
+                  slug={slug}
+                  projectKey={projectKey}
+                  taskId={t.id}
+                  archived={!!board.project.archivedAt}
+                />
+              </TabsContent>
+              {/* Mounted only while open: Radix unmounts inactive tabs, so the feed loads on demand */}
+              <TabsContent value="history" className="pt-2">
+                <ActivityFeed slug={slug} filter={{ taskId: t.id }} linkTasks={false} />
+              </TabsContent>
+            </Tabs>
 
             {mayDelete && (
               <div className="mt-8 border-t px-4 py-4">

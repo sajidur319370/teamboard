@@ -62,6 +62,12 @@ const PROBES: Probe[] = [
   },
   { route: 'DELETE /tasks/:taskId' },
   { route: 'GET /my-tasks' },
+  // Day 16: comments, activity feeds
+  { route: 'GET /tasks/:taskId/comments' },
+  { route: 'POST /tasks/:taskId/comments', body: () => ({ body: 'pwned' }) },
+  { route: 'PATCH /comments/:commentId', body: () => ({ body: 'pwned' }) },
+  { route: 'DELETE /comments/:commentId' },
+  { route: 'GET /activities' },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */
@@ -73,6 +79,7 @@ const B_IDS: Record<string, (t: T) => string> = {
   labelId: (t) => t.b.label.id,
   taskId: (t) => t.b.task.id,
   number: (t) => String(t.b.task.number),
+  commentId: (t) => t.b.comment.id,
 };
 
 function request(t: T, probe: Probe, slug: string) {
@@ -136,6 +143,22 @@ describe('cross-tenant isolation', () => {
     expect(task.body.task).toMatchObject({ id: t.b.task.id, title: 'B Corp task', version: 1 });
     const board = await bob.get(`/api/w/${t.b.ws.slug}/projects/BEE/board`);
     expect(board.body.tasks.map((x: { id: string }) => x.id)).toEqual([t.b.task.id]);
+    expect(board.body.tasks[0].commentCount).toBe(1);
+    const comments = await bob.get(`/api/w/${t.b.ws.slug}/tasks/${t.b.task.id}/comments`);
+    expect(comments.body.items).toEqual([t.b.comment]); // not edited, not deleted, no new ones
+  });
+
+  it("a feed filtered by B's ids, in A's workspace, is empty (filters can't widen the tenant)", async () => {
+    const alice = as(t.a.token);
+    for (const q of [
+      `taskId=${t.b.task.id}`,
+      `projectId=${t.b.project.id}`,
+      `actorId=${t.b.user.id}`,
+    ]) {
+      const res = await alice.get(`/api/w/${t.a.ws.slug}/activities?${q}`);
+      expect(res.status, q).toBe(200);
+      expect(res.body, q).toEqual({ items: [], nextCursor: null });
+    }
   });
 
   it("A's lists never contain B's data", async () => {

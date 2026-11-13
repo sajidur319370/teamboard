@@ -7,4 +7,5 @@ export * from './membership.model';
 export * from './invite.model';
 export * from './project.model';
 export * from './task.model';
+export * from './comment.model';
 export * from './activity.model';

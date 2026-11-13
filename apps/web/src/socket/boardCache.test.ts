@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoardResponse, TaskCardDto } from '@teamboard/shared';
-import { applyRanks, inView, removeTask, upsertTask } from './boardCache';
+import { applyRanks, inView, removeTask, setCommentCount, upsertTask } from './boardCache';
 
 const card = (id: string, version = 1, extra: Partial<TaskCardDto> = {}): TaskCardDto => ({
   id,
@@ -84,5 +84,15 @@ describe('removeTask / applyRanks', () => {
     const b = applyRanks(board([card('a', 4, { rank: 'a0VVVVV' }), card('b', 2)]), { a: 'a1' });
     expect(b.tasks[0]).toMatchObject({ rank: 'a1', version: 5 });
     expect(b.tasks[1]).toMatchObject({ rank: 'a0', version: 2 });
+  });
+});
+
+describe('setCommentCount', () => {
+  it('SETS the new total (a duplicate event is harmless) without bumping the version', () => {
+    const b = board([card('a', 3), card('b')]);
+    const once = setCommentCount(b, 'a', 4);
+    expect(once.tasks[0]).toMatchObject({ commentCount: 4, version: 3 });
+    expect(setCommentCount(once, 'a', 4)).toBe(once); // same total → same object
+    expect(setCommentCount(b, 'zz', 1)).toBe(b);
   });
 });

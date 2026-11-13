@@ -1,5 +1,13 @@
 import type { Types } from 'mongoose';
-import type { ColumnDto, MemberDto, ProjectDto, Role, TaskCardDto } from '@teamboard/shared';
+import type {
+  ColumnDto,
+  CommentDto,
+  MemberDto,
+  ProjectDto,
+  Role,
+  TaskCardDto,
+  TaskRef,
+} from '@teamboard/shared';
 
 /**
  * What happened, in domain terms. Services emit these AFTER their transaction commits;
@@ -46,6 +54,23 @@ export type DomainEvent =
       projectId: Types.ObjectId;
       columnId: string;
       ranks: Record<string, string>; // taskId → new rank
+    }
+  | {
+      type: 'comment.created';
+      projectId: Types.ObjectId;
+      taskId: string;
+      comment: CommentDto;
+      commentCount: number;
+      watcherIds: string[]; // Day 17: notify the watchers (minus the author)
+      task: TaskRef;
+    }
+  | { type: 'comment.updated'; projectId: Types.ObjectId; comment: CommentDto }
+  | {
+      type: 'comment.deleted';
+      projectId: Types.ObjectId;
+      taskId: string;
+      commentId: string;
+      commentCount: number;
     };
 
 export type DomainEventType = DomainEvent['type'];

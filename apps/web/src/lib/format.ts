@@ -1,4 +1,12 @@
-import type { InviteStatus, Role } from '@teamboard/shared';
+import type { InviteStatus, Priority, Role } from '@teamboard/shared';
+
+export const PRIORITY_LABEL: Record<Priority, string> = {
+  urgent: 'Urgent',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  none: 'None',
+};
 
 export const ROLE_LABEL: Record<Role, string> = {
   owner: 'Owner',

@@ -62,6 +62,7 @@ export function useDeleteTask(slug: string, key: string) {
       }),
     onSuccess: (_void, task) => {
       qc.removeQueries({ queryKey: qk.task(slug, key, task.number) });
+      qc.removeQueries({ queryKey: qk.comments(slug, task.id) });
       void qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) });
     },
   });

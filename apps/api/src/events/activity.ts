@@ -1,5 +1,5 @@
 import type { Types } from 'mongoose';
-import type { ActivityAction } from '@teamboard/shared';
+import type { ActivityAction, ActivityMetadataMap } from '@teamboard/shared';
 import type { Ctx } from '../types/ctx';
 
 type EntityType = 'workspace' | 'membership' | 'invite' | 'project' | 'task' | 'comment' | 'sprint';
@@ -23,16 +23,30 @@ export interface ActivityRefs {
   entityId?: Types.ObjectId;
 }
 
+/** One row ready to insert. `action` is widened so one array can hold several actions. */
+export interface ActivityInsert {
+  workspaceId: Types.ObjectId;
+  actorId: Types.ObjectId;
+  action: ActivityAction;
+  entityType: EntityType;
+  entityId: Types.ObjectId;
+  projectId: Types.ObjectId | null;
+  taskId: Types.ObjectId | null;
+  sprintId: Types.ObjectId | null;
+  metadata: object;
+  createdAt: Date;
+}
+
 /**
  * Builds an activity document. Insert it INSIDE the same transaction as the change it
  * describes, because reports are computed from it (database.md §6.3).
  */
-export function activity(
+export function activity<A extends ActivityAction>(
   ctx: Ctx,
-  action: ActivityAction,
-  metadata: object = {},
+  action: A,
+  metadata: ActivityMetadataMap[A], // typed per action: the web renders exactly these fields
   refs: ActivityRefs = {},
-) {
+): ActivityInsert {
   const entityType = ENTITY_BY_PREFIX[action.split('.')[0] ?? ''];
   if (!entityType) throw new Error(`No entity type for activity action "${action}"`);
   return {

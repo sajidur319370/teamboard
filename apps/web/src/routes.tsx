@@ -17,7 +17,7 @@ import { CreateWorkspacePage } from '@/features/workspace/CreateWorkspacePage';
 import { SettingsPage } from '@/features/workspace/SettingsPage';
 import { WorkspaceLayout } from '@/features/workspace/WorkspaceLayout';
 import { WorkspacesPage } from '@/features/workspace/WorkspacesPage';
-import { ComingSoon } from '@/components/ComingSoon';
+import { ProjectActivityPage, WorkspaceActivityPage } from '@/features/activity/ActivityPages';
 import { NotFoundPage } from '@/components/NotFoundPage';
 
 export function AppRoutes() {
@@ -41,6 +41,7 @@ export function AppRoutes() {
           <Route index element={<Navigate to="projects" replace />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="p/:key/settings" element={<ProjectSettingsPage />} />
+          <Route path="p/:key/activity" element={<ProjectActivityPage />} />
           <Route path="p/:key" element={<BoardPage />}>
             <Route index element={<Navigate to="board" replace />} />
             <Route path="board" element={null} />
@@ -48,7 +49,7 @@ export function AppRoutes() {
             <Route path="tasks/:number" element={<TaskDrawer />} />
           </Route>
           <Route path="my-tasks" element={<MyTasksPage />} />
-          <Route path="activity" element={<ComingSoon title="Activity" day={16} />} />
+          <Route path="activity" element={<WorkspaceActivityPage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

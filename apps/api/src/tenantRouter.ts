@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { mount } from './lib/routeRegistry';
+import { activitiesRouter } from './modules/activity/activity.routes';
+import { commentsRouter, taskCommentsRouter } from './modules/comments/comment.routes';
 import { invitesRouter } from './modules/invites/invite.routes';
 import { membersRouter, workspaceMemberActions } from './modules/members/member.routes';
 import { projectsRouter } from './modules/projects/project.routes';
@@ -20,5 +22,8 @@ mount(tenantRouter, '/', workspaceMemberActions);
 mount(tenantRouter, '/members', membersRouter);
 mount(tenantRouter, '/invites', invitesRouter);
 mount(tenantRouter, '/projects', projectsRouter);
+mount(tenantRouter, '/tasks/:taskId/comments', taskCommentsRouter);
 mount(tenantRouter, '/tasks', tasksRouter);
+mount(tenantRouter, '/comments', commentsRouter);
+mount(tenantRouter, '/activities', activitiesRouter);
 mount(tenantRouter, '/my-tasks', myTasksRouter);

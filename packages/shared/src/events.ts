@@ -2,7 +2,7 @@
 // event name or payload can't drift between the server that emits it and the client that
 // listens. Clients NEVER write over the socket (FR-RT-05): only these joins/leaves go up.
 import type { Role } from './constants';
-import type { ColumnDto, Id, MemberDto, ProjectDto, TaskCardDto } from './dto';
+import type { ColumnDto, CommentDto, Id, MemberDto, ProjectDto, TaskCardDto } from './dto';
 
 /** Fields on EVERY server→client payload (FR-RT-07). */
 export interface Envelope {
@@ -27,6 +27,10 @@ export interface ServerToClientEvents {
   'column:deleted': E<{ columns: ColumnDto[]; movedTaskIds: Id[] }>;
   'column:reordered': E<{ columns: ColumnDto[] }>;
   'column:rebalanced': E<{ columnId: Id; ranks: Record<Id, string> }>;
+  // commentCount is the task's NEW total: set it, never +1, so a duplicate delivery is harmless.
+  'comment:created': E<{ comment: CommentDto; taskId: Id; commentCount: number }>;
+  'comment:updated': E<{ comment: CommentDto }>;
+  'comment:deleted': E<{ commentId: Id; taskId: Id; commentCount: number }>;
   // workspace:<id> (and the project's own board room)
   'project:created': E<{ project: ProjectDto }>;
   'project:updated': E<{ project: ProjectDto }>;
@@ -38,7 +42,7 @@ export interface ServerToClientEvents {
   // user:<id>
   'membership:revoked': (p: { workspaceId: Id }) => void;
   'membership:roleChanged': (p: { workspaceId: Id; role: Role }) => void;
-  // Day 16: comment:*  ·  Day 17: notification:new  ·  Day 18: sprint:*, tasks:sprintChanged
+  // Day 17: notification:new  ·  Day 18: sprint:*, tasks:sprintChanged
 }
 
 export type Ack = { ok: true } | { ok: false; code: string };

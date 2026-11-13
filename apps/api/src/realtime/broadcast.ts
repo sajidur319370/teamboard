@@ -103,6 +103,33 @@ export async function broadcast(ctx: Ctx, e: DomainEvent): Promise<void> {
       });
       break;
 
+    // FR-CMT-06: to the board room, which is where every open drawer of this task lives.
+    case 'comment.created':
+      board(e.projectId).emit('comment:created', {
+        ...base,
+        projectId: String(e.projectId),
+        taskId: e.taskId,
+        comment: e.comment,
+        commentCount: e.commentCount,
+      });
+      break;
+    case 'comment.updated':
+      board(e.projectId).emit('comment:updated', {
+        ...base,
+        projectId: String(e.projectId),
+        comment: e.comment,
+      });
+      break;
+    case 'comment.deleted':
+      board(e.projectId).emit('comment:deleted', {
+        ...base,
+        projectId: String(e.projectId),
+        taskId: e.taskId,
+        commentId: e.commentId,
+        commentCount: e.commentCount,
+      });
+      break;
+
     case 'project.changed': {
       const p = { ...base, projectId: e.project.id, project: e.project };
       // To the workspace (project lists) AND to the project's own open boards

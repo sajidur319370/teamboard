@@ -5,7 +5,7 @@ import {
   type ProjectListItemDto,
   type UpdateProjectInput,
 } from '@teamboard/shared';
-import { Activity, DEFAULT_COLUMNS, Project, Task } from '../../db/models';
+import { Activity, Comment, DEFAULT_COLUMNS, Project, Task } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict } from '../../lib/errors';
 import { oid } from '../../lib/ids';
@@ -133,7 +133,14 @@ export async function updateProject(ctx: Ctx, key: string, input: UpdateProjectI
     ).lean();
     if (!doc) throw conflict('PROJECT_ARCHIVED', 'This project is archived and cannot be changed.');
     await Activity.create(
-      [activity(ctx, 'project.updated', { changes: Object.keys($set) }, { projectId: p._id })],
+      [
+        activity(
+          ctx,
+          'project.updated',
+          { changes: Object.keys($set), name: doc.name, key: doc.key },
+          { projectId: p._id },
+        ),
+      ],
       { session },
     );
     return doc;
@@ -161,10 +168,8 @@ export async function setArchived(ctx: Ctx, key: string, archived: boolean) {
         activity(
           ctx,
           archived ? 'project.archived' : 'project.unarchived',
-          { name: p.name },
-          {
-            projectId: p._id,
-          },
+          { name: p.name, key: p.key },
+          { projectId: p._id },
         ),
       ],
       { session },
@@ -190,7 +195,8 @@ export async function deleteProject(ctx: Ctx, key: string, confirmKey: string) {
   await withTransaction(async (session) => {
     const scope = { workspaceId: ctx.workspaceId, projectId: p._id };
     await Task.deleteMany(scope, { session });
-    // Add as the models arrive: Comment (Day 16), Notification (Day 17), Sprint (Day 18)
+    await Comment.deleteMany(scope, { session });
+    // Add as the models arrive: Notification (Day 17), Sprint (Day 18)
     await Activity.deleteMany(scope, { session });
     await Project.deleteOne({ _id: p._id, workspaceId: ctx.workspaceId }, { session });
     // Workspace-level (no projectId), so it survives as the record of what was deleted.

@@ -6,11 +6,12 @@ import {
   type TaskDto,
   type UpdateTaskInput,
 } from '@teamboard/shared';
-import { Activity, CARD_FIELDS, Project, Task } from '../../db/models';
+import { Activity, CARD_FIELDS, Comment, Project, Task } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { oid } from '../../lib/ids';
 import { cleanText } from '../../lib/text';
+import { userRefs } from '../../lib/people';
 import { retryOnRankCollision, uniqueKeyAfter } from '../../lib/rank';
 import { retryable, withRetry } from '../../lib/retry';
 import { activity } from '../../events/activity';
@@ -196,6 +197,9 @@ export async function updateTask(ctx: Ctx, taskId: Types.ObjectId, input: Update
     const fields = Object.keys(changes) as Editable[];
     if (fields.length === 0) return toTaskDto(current); // nothing changed: no version bump
 
+    // Name snapshots for the assign/unassign history lines (FR-ACT-04).
+    const names = await userRefs([...assigned, ...unassigned]);
+
     // CAS: the old values that feed activities go into the filter.
     const cas: Record<string, unknown> = { version: current.version };
 
@@ -220,10 +224,10 @@ export async function updateTask(ctx: Ctx, taskId: Types.ObjectId, input: Update
         );
       // Day 18: a storyPoints change in an ACTIVE sprint carries scopeDelta/doneDelta (D6)
       for (const id of assigned) {
-        acts.push(activity(ctx, 'task.assigned', { ...ref, user: { id: String(id) } }, refs));
+        acts.push(activity(ctx, 'task.assigned', { ...ref, user: names.get(String(id))! }, refs));
       }
       for (const id of unassigned) {
-        acts.push(activity(ctx, 'task.unassigned', { ...ref, user: { id: String(id) } }, refs));
+        acts.push(activity(ctx, 'task.unassigned', { ...ref, user: names.get(String(id))! }, refs));
       }
       await Activity.insertMany(acts, { session });
       return t;
@@ -272,7 +276,10 @@ export async function deleteTask(ctx: Ctx, taskId: Types.ObjectId) {
       { session },
     ).lean();
     if (!deleted) throw notFound(); // deleted by a parallel request
-    // Day 16: Comment.deleteMany · Day 17: Notification.deleteMany · Day 18: scope delta (D9)
+    // Same transaction: a comment racing this delete either lands first (and is deleted
+    // here) or finds no task (404). No orphans either way.
+    await Comment.deleteMany({ workspaceId: ctx.workspaceId, taskId }, { session });
+    // Day 17: Notification.deleteMany · Day 18: scope delta (D9)
     await Activity.create(
       [
         activity(

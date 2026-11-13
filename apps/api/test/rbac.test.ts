@@ -20,6 +20,7 @@ const PARAMS: Record<string, (t: Team) => string> = {
   labelId: (t) => t.label.id,
   taskId: (t) => t.task.id,
   number: (t) => String(t.task.number),
+  commentId: (t) => t.comment.id,
 };
 
 function urlFor(path: string, t: Team) {

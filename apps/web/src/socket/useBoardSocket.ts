@@ -1,25 +1,13 @@
 import { useEffect } from 'react';
-import { useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { BoardResponse, ColumnDto, ProjectDto, TaskCardDto } from '@teamboard/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import type { ColumnDto, CommentDto, ProjectDto, TaskCardDto } from '@teamboard/shared';
 import { qk } from '@/api/keys';
 import { getSocket } from './client';
 import { isOwnMutation } from './mutationIds';
 import { whenWorkspaceJoined } from './workspaceJoin';
 import { applyRanks, removeTask, upsertTask } from './boardCache';
-
-/** Apply fn to EVERY cached view of this board (active / backlog / all / sprint X). */
-function updateBoards(
-  qc: QueryClient,
-  slug: string,
-  key: string,
-  fn: (b: BoardResponse) => BoardResponse,
-) {
-  for (const [queryKey, data] of qc.getQueriesData<BoardResponse>({
-    queryKey: qk.boardAll(slug, key),
-  })) {
-    if (data) qc.setQueryData(queryKey, fn(data));
-  }
-}
+import { appendComment, removeComment, replaceComment } from './commentsCache';
+import { patchCommentCount, patchComments, updateBoards } from './queryPatches';
 
 /**
  * Joins board:<projectId> (after the workspace room) and patches the cache from events.
@@ -39,22 +27,45 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     const refreshDrawer = (n: number) =>
       void qc.invalidateQueries({ queryKey: qk.task(slug, key, n) });
     const refetchBoard = () => void qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) });
+    // An open History tab / project feed shows the change (only ACTIVE feeds refetch).
+    const refreshFeeds = () => void qc.invalidateQueries({ queryKey: qk.activityAll(slug) });
 
     const onTask = (p: { task: TaskCardDto; clientMutationId?: string }) => {
+      refreshFeeds(); // own changes too: the History tab isn't patched optimistically
       if (mine(p)) return; // this tab already applied it optimistically
       updateBoards(qc, slug, key, (b) => upsertTask(b, p.task));
       refreshDrawer(p.task.number); // an open drawer shows the new values
       void qc.invalidateQueries({ queryKey: qk.myTasks(slug) });
     };
     const onDeleted = (p: { taskId: string; number: number; clientMutationId?: string }) => {
+      refreshFeeds();
       if (mine(p)) return;
       updateBoards(qc, slug, key, (b) => removeTask(b, p.taskId));
       qc.removeQueries({ queryKey: qk.task(slug, key, p.number) }); // open drawer → "deleted" (E2)
+      qc.removeQueries({ queryKey: qk.comments(slug, p.taskId) });
     };
     const onColumns = (p: { columns: ColumnDto[] }) =>
       updateBoards(qc, slug, key, (b) => ({ ...b, project: { ...b.project, columns: p.columns } }));
     const onRebalanced = (p: { ranks: Record<string, string> }) =>
       updateBoards(qc, slug, key, (b) => applyRanks(b, p.ranks));
+    // FR-CMT-06: every open drawer of the task gets the comment; every card gets the count.
+    type CommentEvent = { taskId: string; commentCount: number; clientMutationId?: string };
+    const onCommentCreated = (p: CommentEvent & { comment: CommentDto }) => {
+      refreshFeeds();
+      if (mine(p)) return; // this tab already added it (onSuccess)
+      patchComments(qc, slug, p.taskId, (d) => appendComment(d, p.comment));
+      patchCommentCount(qc, slug, key, p.taskId, p.commentCount);
+    };
+    const onCommentUpdated = (p: { comment: CommentDto; clientMutationId?: string }) => {
+      if (mine(p)) return;
+      patchComments(qc, slug, p.comment.taskId, (d) => replaceComment(d, p.comment));
+    };
+    const onCommentDeleted = (p: CommentEvent & { commentId: string }) => {
+      refreshFeeds();
+      if (mine(p)) return;
+      patchComments(qc, slug, p.taskId, (d) => removeComment(d, p.commentId));
+      patchCommentCount(qc, slug, key, p.taskId, p.commentCount);
+    };
     const onProject = (p: { project: ProjectDto }) =>
       updateBoards(qc, slug, key, (b) => ({ ...b, project: p.project })); // labels, archived banner (E17)
 
@@ -73,6 +84,9 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     s.on('project:updated', onProject);
     s.on('project:archived', onProject);
     s.on('project:deleted', refetchBoard); // the refetch 404s → "this project was deleted"
+    s.on('comment:created', onCommentCreated);
+    s.on('comment:updated', onCommentUpdated);
+    s.on('comment:deleted', onCommentDeleted);
 
     return () => {
       s.emit('board:leave', { projectId });
@@ -89,6 +103,9 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
       s.off('project:updated', onProject);
       s.off('project:archived', onProject);
       s.off('project:deleted', refetchBoard);
+      s.off('comment:created', onCommentCreated);
+      s.off('comment:updated', onCommentUpdated);
+      s.off('comment:deleted', onCommentDeleted);
     };
   }, [slug, key, projectId, qc]);
 }
