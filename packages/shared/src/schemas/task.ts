@@ -58,6 +58,18 @@ export const boardQuery = z.object({
   sprint: z.union([z.enum(BOARD_VIEWS), objectIdSchema]).default('active'),
 });
 
+/**
+ * PATCH /tasks/:taskId/move (FR-ORD). The client sends INTENT ("between these two cards"),
+ * never a rank or an index: the server reads the neighbours' current ranks and decides.
+ */
+export const moveTaskSchema = z.object({
+  toColumnId: objectIdSchema,
+  prevTaskId: objectIdSchema.nullable(), // the card directly ABOVE the drop position (null = top)
+  nextTaskId: objectIdSchema.nullable(), // the card directly BELOW it (null = bottom)
+  clientMutationId: z.string().min(1).max(64).optional(), // echo suppression (Day 15)
+});
+export type MoveTaskInput = z.infer<typeof moveTaskSchema>;
+
 export const taskIdParams = z.object({ taskId: objectIdSchema });
 export const taskNumberParams = keyParams.extend({
   number: z.coerce.number().int().positive(),

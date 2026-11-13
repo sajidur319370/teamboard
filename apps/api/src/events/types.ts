@@ -33,6 +33,19 @@ export type DomainEvent =
       assignedIds: string[];
       unassignedIds: string[];
     }
-  | { type: 'task.deleted'; projectId: Types.ObjectId; taskId: string; number: number };
+  | { type: 'task.deleted'; projectId: Types.ObjectId; taskId: string; number: number }
+  | {
+      type: 'task.moved';
+      projectId: Types.ObjectId;
+      task: TaskCardDto;
+      fromColumnId: string;
+      completed: boolean;
+    }
+  | {
+      type: 'column.rebalanced';
+      projectId: Types.ObjectId;
+      columnId: string;
+      ranks: Record<string, string>; // taskId → new rank
+    };
 
 export type DomainEventType = DomainEvent['type'];

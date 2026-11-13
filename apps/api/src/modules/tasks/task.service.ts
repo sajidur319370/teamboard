@@ -11,7 +11,7 @@ import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { oid } from '../../lib/ids';
 import { cleanText } from '../../lib/text';
-import { uniqueKeyAfter } from '../../lib/rank';
+import { retryOnRankCollision, uniqueKeyAfter } from '../../lib/rank';
 import { retryable, withRetry } from '../../lib/retry';
 import { activity } from '../../events/activity';
 import { publish } from '../../events/publish';
@@ -54,55 +54,57 @@ export async function createTask(ctx: Ctx, key: string, input: CreateTaskInput):
   const column = p.columns.find((c) => c._id.equals(chosen._id));
   if (!column) throw badRequest('INVALID_COLUMN', 'That column was just deleted.');
 
-  // 3. Bottom of the column.
-  const last = await Task.findOne({
-    workspaceId: ctx.workspaceId,
-    projectId: p._id,
-    columnId: column._id,
-  })
-    .sort({ rank: -1 })
-    .select('rank')
-    .lean();
-  // Unique even if parallel creates read the same `last` (the number is unique per create).
-  const rank = uniqueKeyAfter(last?.rank ?? null, p.taskCounter);
+  // 3+4. Bottom of the column, then insert + activity atomically. Ranks are unique per
+  // column: if another write took this exact key a moment ago, recompute and try again.
+  const task = await retryOnRankCollision(async () => {
+    const last = await Task.findOne({
+      workspaceId: ctx.workspaceId,
+      projectId: p._id,
+      columnId: column._id,
+    })
+      .sort({ rank: -1 })
+      .select('rank')
+      .lean();
+    // Unique even if parallel creates read the same `last` (the number is unique per create).
+    const rank = uniqueKeyAfter(last?.rank ?? null, p.taskCounter);
 
-  // 4. Insert + activity, atomically.
-  const task = await withTransaction(async (session) => {
-    const [t] = await Task.create(
-      [
-        {
-          workspaceId: ctx.workspaceId,
-          projectId: p._id,
-          number: p.taskCounter,
-          title: cleanText(input.title),
-          description: cleanText(input.description ?? ''),
-          columnId: column._id,
-          rank,
-          assigneeIds,
-          reporterId: ctx.userId,
-          watcherIds: uniq([ctx.userId, ...assigneeIds]), // reporter + assignees
-          priority: input.priority ?? 'none',
-          dueDate: input.dueDate ?? null,
-          labelIds,
-          storyPoints: input.storyPoints ?? null,
-          sprintId: null,
-          completedAt: column.category === 'done' ? ctx.now() : null, // BR-07
-        },
-      ],
-      { session },
-    );
-    await Activity.create(
-      [
-        activity(
-          ctx,
-          'task.created',
-          { task: taskRef(t!, p), column: colRef(column) },
-          { projectId: p._id, taskId: t!._id },
-        ),
-      ],
-      { session },
-    );
-    return t!;
+    return withTransaction(async (session) => {
+      const [t] = await Task.create(
+        [
+          {
+            workspaceId: ctx.workspaceId,
+            projectId: p._id,
+            number: p.taskCounter,
+            title: cleanText(input.title),
+            description: cleanText(input.description ?? ''),
+            columnId: column._id,
+            rank,
+            assigneeIds,
+            reporterId: ctx.userId,
+            watcherIds: uniq([ctx.userId, ...assigneeIds]), // reporter + assignees
+            priority: input.priority ?? 'none',
+            dueDate: input.dueDate ?? null,
+            labelIds,
+            storyPoints: input.storyPoints ?? null,
+            sprintId: null,
+            completedAt: column.category === 'done' ? ctx.now() : null, // BR-07
+          },
+        ],
+        { session },
+      );
+      await Activity.create(
+        [
+          activity(
+            ctx,
+            'task.created',
+            { task: taskRef(t!, p), column: colRef(column) },
+            { projectId: p._id, taskId: t!._id },
+          ),
+        ],
+        { session },
+      );
+      return t!;
+    });
   });
 
   const plain = task.toObject();

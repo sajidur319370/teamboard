@@ -131,6 +131,12 @@ export interface TaskCardDto {
   version: number;
 }
 
+/** PATCH /tasks/:taskId/move. `noop`: the card was already there, nothing was written. */
+export interface MoveTaskResponse {
+  task: TaskCardDto;
+  noop: boolean;
+}
+
 /** The full task, for the drawer. */
 export interface TaskDto extends TaskCardDto {
   description: string;

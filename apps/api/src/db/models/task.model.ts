@@ -57,7 +57,12 @@ taskSchema.index(
   { unique: true, name: 'uniq_task_number' },
 );
 // "All open tasks" board + move neighbors (AP5, AP6)
-taskSchema.index({ workspaceId: 1, projectId: 1, columnId: 1, rank: 1 });
+// UNIQUE: two cards in one column never share a rank, so there is always room between
+// neighbours. A write that would duplicate one gets E11000 and recomputes (see lib/rank.ts).
+taskSchema.index(
+  { workspaceId: 1, projectId: 1, columnId: 1, rank: 1 },
+  { unique: true, name: 'uniq_column_rank' },
+);
 // Sprint board, backlog (sprintId: null), per-member report (AP4, AP13)
 taskSchema.index({ workspaceId: 1, projectId: 1, sprintId: 1, columnId: 1, rank: 1 });
 // My tasks (AP14): multikey on assigneeIds

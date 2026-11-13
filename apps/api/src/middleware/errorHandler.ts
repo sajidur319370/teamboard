@@ -11,6 +11,8 @@ const DUPLICATE_KEY: Record<string, { status: number; code: string }> = {
   uniq_member: { status: 409, code: 'ALREADY_MEMBER' },
   uniq_project_key: { status: 409, code: 'KEY_TAKEN' },
   one_active_sprint_per_project: { status: 409, code: 'ACTIVE_SPRINT_EXISTS' },
+  // Normally retried away by retryOnRankCollision; if it ever reaches a client: try again.
+  uniq_column_rank: { status: 409, code: 'RETRY' },
 };
 
 /** Maps anything thrown to an AppError. Unknown errors become a generic 500. */

@@ -56,6 +56,10 @@ const PROBES: Probe[] = [
   { route: 'POST /projects/:key/tasks', body: () => ({ title: 'pwned' }) },
   { route: 'GET /projects/:key/tasks/:number' },
   { route: 'PATCH /tasks/:taskId', body: () => ({ title: 'pwned' }) },
+  {
+    route: 'PATCH /tasks/:taskId/move',
+    body: (t) => ({ toColumnId: t.b.project.columns[1]!.id, prevTaskId: null, nextTaskId: null }),
+  },
   { route: 'DELETE /tasks/:taskId' },
   { route: 'GET /my-tasks' },
 ];
