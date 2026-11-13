@@ -133,3 +133,24 @@
     @apply font-sans;
   }
 }
+
+/*
+ * Report charts (Day 19). Validated with the data-viz palette checker in both modes:
+ * actual (blue) and scope (orange) pass the lightness band, chroma, CVD separation
+ * (ΔE 24.7 light / 26.8 dark) and 3:1 contrast. The ideal line is a muted reference,
+ * not a third hue. Dark values follow the app's `.dark` class, like every other token.
+ */
+:root {
+  --chart-actual: #2a78d6;
+  --chart-scope: #eb6834;
+  --chart-ideal: #898781;
+  --chart-grid: #e1e0d9;
+  --chart-text: #52514e;
+}
+.dark {
+  --chart-actual: #3987e5;
+  --chart-scope: #d95926;
+  --chart-ideal: #898781;
+  --chart-grid: #2c2c2a;
+  --chart-text: #c3c2b7;
+}

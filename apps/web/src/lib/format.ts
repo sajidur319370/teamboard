@@ -53,3 +53,13 @@ export const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 export const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+/** "Oct 19" for a YYYY-MM-DD day (noon, so no timezone can shift it to another day). */
+export const dayLabel = (day: string) =>
+  new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+/** "Oct 19 – Oct 28" */
+export const dayRange = (start: string, end: string) => `${dayLabel(start)} – ${dayLabel(end)}`;
+
+/** "1 task", "3 tasks" */
+export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

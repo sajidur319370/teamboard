@@ -283,3 +283,58 @@ export interface BacklogResponse {
   /** sprintId = null, by priority then creation. */
   backlog: TaskCardDto[];
 }
+
+// ---- Reports (requirement §15, queries.md §12–14). Values are END OF DAY, workspace tz. ----
+
+export interface BurndownPoint {
+  day: string; // YYYY-MM-DD
+  scopeTasks: number;
+  scopePoints: number;
+  remainingTasks: number | null; // null = a future day
+  remainingPoints: number | null;
+  idealTasks: number | null; // null = past the planned end (an overdue sprint)
+  idealPoints: number | null;
+}
+
+export interface MemberStatDto {
+  userId: Id | null; // null = Unassigned
+  name: string;
+  avatarColor: PaletteColor | null;
+  tasks: number;
+  points: number;
+  isFormer: boolean;
+}
+
+export interface SprintSummaryReportDto {
+  committedTasks: number;
+  committedPoints: number;
+  addedTasks: number;
+  addedPoints: number;
+  removedTasks: number;
+  removedPoints: number;
+  completedTasks: number;
+  completedPoints: number;
+  carriedOverTasks: number;
+  carriedOverPoints: number;
+  /** completed / final scope (committed + added − removed), 0–100, per unit (FR-RPT-06). */
+  completionPct: { tasks: number; points: number };
+}
+
+/** Every report response says whether it is the frozen copy (FR-RPT-07). */
+interface ReportMeta {
+  timezone: string;
+  frozenAt: string | null; // set for completed sprints
+}
+export type ReportUnit = 'points' | 'count';
+export interface BurndownResponse extends ReportMeta {
+  unit: ReportUnit;
+  points: BurndownPoint[];
+  /** Points mode warning: "N tasks have no estimate" (FR-RPT-03). */
+  unestimated: number;
+}
+export interface MembersReportResponse extends ReportMeta {
+  members: MemberStatDto[];
+}
+export interface SummaryReportResponse extends ReportMeta {
+  summary: SprintSummaryReportDto;
+}

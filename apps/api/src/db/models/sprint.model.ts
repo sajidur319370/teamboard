@@ -33,6 +33,7 @@ const memberStatSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, default: null }, // null = Unassigned
     name: String,
+    avatarColor: { type: String, default: null },
     tasks: Number,
     points: Number,
     isFormer: Boolean,
@@ -54,6 +55,7 @@ const reportSchema = new Schema(
       completedPoints: Number,
       carriedOverTasks: Number,
       carriedOverPoints: Number,
+      completionPct: { tasks: Number, points: Number },
     },
     burndown: { type: [burndownPointSchema], default: [] },
     members: { type: [memberStatSchema], default: [] },

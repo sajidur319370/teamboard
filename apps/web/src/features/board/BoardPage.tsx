@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router';
-import { ActivityIcon, ArchiveIcon, SettingsIcon } from 'lucide-react';
+import { ActivityIcon, ArchiveIcon, BarChart3Icon, ListTodoIcon, SettingsIcon } from 'lucide-react';
+import { ActiveSprintInfo, SprintSelector } from '@/features/sprints/SprintSelector';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -96,7 +97,18 @@ export function BoardPage() {
                 <ArchiveIcon className="size-3.5" /> Archived: read-only
               </span>
             )}
+            <SprintSelector slug={slug} projectKey={project.key} board={ctx.board} />
             <Button asChild variant="ghost" size="sm" className="ml-auto">
+              <Link to={`/w/${slug}/p/${project.key}/backlog`}>
+                <ListTodoIcon /> Backlog
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
+              <Link to={`/w/${slug}/p/${project.key}/reports`}>
+                <BarChart3Icon /> Reports
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
               <Link to={`/w/${slug}/p/${project.key}/activity`}>
                 <ActivityIcon /> Activity
               </Link>
@@ -108,8 +120,8 @@ export function BoardPage() {
                 </Link>
               </Button>
             </Can>
-            {/* Day 19: <SprintSelector /> */}
           </div>
+          <ActiveSprintInfo board={ctx.board} tz={workspace.settings.timezone} />
           <FilterBar shown={shownCount} total={ctx.board.tasks.length} />
         </header>
         <div

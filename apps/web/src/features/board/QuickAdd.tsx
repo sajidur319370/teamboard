@@ -6,7 +6,9 @@ import { useCreateTask } from './api';
 
 /** FR-BRD-09: type a title, press Enter, the task lands at the bottom of this column. */
 export function QuickAdd({ columnId, columnName }: { columnId: string; columnName: string }) {
-  const { slug, projectKey } = useBoardCtx();
+  const { slug, projectKey, board } = useBoardCtx();
+  // FR-BRD-07: adding while looking at the running sprint adds INTO that sprint.
+  const sprintId = board.view === 'active' ? board.activeSprint?.id : undefined;
   const create = useCreateTask(slug, projectKey);
   const [title, setTitle] = useState('');
 
@@ -17,7 +19,7 @@ export function QuickAdd({ columnId, columnName }: { columnId: string; columnNam
         const t = title.trim();
         if (!t) return;
         create.mutate(
-          { title: t, columnId },
+          { title: t, columnId, ...(sprintId && { sprintId }) },
           { onSuccess: () => setTitle(''), onError: (err) => toast.error(err.message) },
         );
       }}

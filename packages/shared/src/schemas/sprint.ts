@@ -45,3 +45,5 @@ export const completeSprintSchema = z.object({
 
 export const sprintIdParams = z.object({ sprintId: objectIdSchema });
 export const sprintListQuery = z.object({ state: z.enum(SPRINT_STATES).optional() });
+
+export const burndownQuery = z.object({ unit: z.enum(['points', 'count']).optional() });

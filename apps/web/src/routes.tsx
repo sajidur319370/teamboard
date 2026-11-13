@@ -1,4 +1,7 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
+import { BacklogPage } from '@/features/sprints/BacklogPage';
+import { FullPageSpinner } from '@/components/FullPageSpinner';
 import { GuestOnly } from '@/features/auth/GuestOnly';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { LoginPage } from '@/features/auth/LoginPage';
@@ -19,6 +22,9 @@ import { WorkspaceLayout } from '@/features/workspace/WorkspaceLayout';
 import { WorkspacesPage } from '@/features/workspace/WorkspacesPage';
 import { ProjectActivityPage, WorkspaceActivityPage } from '@/features/activity/ActivityPages';
 import { NotFoundPage } from '@/components/NotFoundPage';
+
+// Charts (recharts) are heavy: load them only when someone opens a report.
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage'));
 
 export function AppRoutes() {
   return (
@@ -42,6 +48,15 @@ export function AppRoutes() {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="p/:key/settings" element={<ProjectSettingsPage />} />
           <Route path="p/:key/activity" element={<ProjectActivityPage />} />
+          <Route path="p/:key/backlog" element={<BacklogPage />} />
+          <Route
+            path="p/:key/reports/:sprintId?"
+            element={
+              <Suspense fallback={<FullPageSpinner />}>
+                <ReportsPage />
+              </Suspense>
+            }
+          />
           <Route path="p/:key" element={<BoardPage />}>
             <Route index element={<Navigate to="board" replace />} />
             <Route path="board" element={null} />

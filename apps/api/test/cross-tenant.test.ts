@@ -88,6 +88,10 @@ const PROBES: Probe[] = [
     route: 'POST /sprints/:sprintId/tasks',
     body: (t) => ({ action: 'add', taskIds: [t.b.task.id] }),
   },
+  // Day 19: reports
+  { route: 'GET /sprints/:sprintId/reports/burndown' },
+  { route: 'GET /sprints/:sprintId/reports/members' },
+  { route: 'GET /sprints/:sprintId/reports/summary' },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */

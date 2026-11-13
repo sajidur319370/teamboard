@@ -27,11 +27,22 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     const refreshDrawer = (n: number) =>
       void qc.invalidateQueries({ queryKey: qk.task(slug, key, n) });
     const refetchBoard = () => void qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) });
+    // The backlog page shows the same tasks grouped by sprint; the reports follow too.
+    const refetchPlanning = () => {
+      void qc.invalidateQueries({ queryKey: qk.backlog(slug, key) });
+      void qc.invalidateQueries({ queryKey: qk.sprints(slug, key) });
+      void qc.invalidateQueries({ queryKey: ['w', slug, 'report'] });
+    };
+    const onSprint = () => {
+      refetchBoard();
+      refetchPlanning();
+    };
     // An open History tab / project feed shows the change (only ACTIVE feeds refetch).
     const refreshFeeds = () => void qc.invalidateQueries({ queryKey: qk.activityAll(slug) });
 
     const onTask = (p: { task: TaskCardDto; clientMutationId?: string }) => {
       refreshFeeds(); // own changes too: the History tab isn't patched optimistically
+      refetchPlanning(); // only ACTIVE queries refetch: cheap when the backlog isn't open
       if (mine(p)) return; // this tab already applied it optimistically
       updateBoards(qc, slug, key, (b) => upsertTask(b, p.task));
       refreshDrawer(p.task.number); // an open drawer shows the new values
@@ -39,6 +50,7 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     };
     const onDeleted = (p: { taskId: string; number: number; clientMutationId?: string }) => {
       refreshFeeds();
+      refetchPlanning();
       if (mine(p)) return;
       updateBoards(qc, slug, key, (b) => removeTask(b, p.taskId));
       qc.removeQueries({ queryKey: qk.task(slug, key, p.number) }); // open drawer → "deleted" (E2)
@@ -86,10 +98,12 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     s.on('project:deleted', refetchBoard); // the refetch 404s → "this project was deleted"
     // Sprints (Day 18): the payload has ids only, and the active-sprint view depends on
     // them, so refetch. The backlog page (Day 19) listens the same way.
-    s.on('tasks:sprintChanged', refetchBoard);
-    s.on('sprint:started', refetchBoard);
-    s.on('sprint:completed', refetchBoard);
-    s.on('sprint:updated', refetchBoard);
+    s.on('tasks:sprintChanged', onSprint);
+    s.on('sprint:started', onSprint);
+    s.on('sprint:completed', onSprint);
+    s.on('sprint:updated', onSprint);
+    s.on('sprint:created', onSprint);
+    s.on('sprint:deleted', onSprint);
     s.on('comment:created', onCommentCreated);
     s.on('comment:updated', onCommentUpdated);
     s.on('comment:deleted', onCommentDeleted);
@@ -109,10 +123,12 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
       s.off('project:updated', onProject);
       s.off('project:archived', onProject);
       s.off('project:deleted', refetchBoard);
-      s.off('tasks:sprintChanged', refetchBoard);
-      s.off('sprint:started', refetchBoard);
-      s.off('sprint:completed', refetchBoard);
-      s.off('sprint:updated', refetchBoard);
+      s.off('tasks:sprintChanged', onSprint);
+      s.off('sprint:started', onSprint);
+      s.off('sprint:completed', onSprint);
+      s.off('sprint:updated', onSprint);
+      s.off('sprint:created', onSprint);
+      s.off('sprint:deleted', onSprint);
       s.off('comment:created', onCommentCreated);
       s.off('comment:updated', onCommentUpdated);
       s.off('comment:deleted', onCommentDeleted);

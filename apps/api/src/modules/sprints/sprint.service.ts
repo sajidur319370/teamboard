@@ -21,6 +21,7 @@ import { assertWritable, findProject } from '../projects/project.helpers';
 import { toTaskCard } from '../tasks/task.dto';
 import { lockSprint, sprintScopeActivity, touchSprint } from './sprint.helpers';
 import { toSprintDto } from './sprint.dto';
+import { buildSprintReport } from '../reports/report.service';
 
 const sprintRef = (s: { name: string; number: number }) => ({ name: s.name, number: s.number });
 const sumPoints = (ts: { storyPoints?: number | null }[]) =>
@@ -348,8 +349,9 @@ export async function completeSprint(
       .lean();
     const unfinished = inSprint.filter((t) => !t.completedAt);
 
-    // 1. Freeze the report BEFORE moving unfinished tasks out (Day 19: buildSprintReport).
-    const report = null;
+    // 1. Freeze the report BEFORE moving unfinished tasks out (FR-RPT-07): reads the
+    //    transaction's snapshot, so it describes exactly the sprint that closed.
+    const report = await buildSprintReport(ctx, sprint, session);
 
     // 2. Carry over: unfinished tasks → backlog or the chosen planned sprint.
     if (unfinished.length) {
