@@ -27,7 +27,17 @@ export function createApp(options: AppOptions = {}) {
 
   // Order matters: logging/request id → security headers → CORS → body parsing → input checks.
   app.use(httpLogger);
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          // Our own origin plus its wss:// form for Socket.io. Older Safari versions don't
+          // treat wss: as 'self', which would silently block the live board.
+          connectSrc: ["'self'", env.APP_URL.replace(/^http/, 'ws')],
+        },
+      },
+    }),
+  );
   app.use(cors({ origin: env.APP_URL, credentials: true }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());

@@ -1,6 +1,7 @@
 export * from './constants';
 export * from './dates';
 export * from './dto';
+export * from './events';
 export * from './permissions';
 export * from './schemas/common';
 export * from './schemas/auth';
