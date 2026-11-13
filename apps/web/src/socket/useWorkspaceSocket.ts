@@ -56,6 +56,13 @@ export function useWorkspaceSocket(workspace: WorkspaceDto) {
       toast.info(`Your role in ${name} is now ${ROLE_LABEL[p.role]}.`);
     };
 
+    // FR-NTF-05: the badge is SET from the push (no refetch); the open list refetches.
+    const onNotification = (p: { workspaceId: string; unreadCount: number }) => {
+      if (p.workspaceId !== id) return; // another workspace (switcher badge: FR-NTF-11, Could)
+      qc.setQueryData(qk.unread(slug), p.unreadCount);
+      void qc.invalidateQueries({ queryKey: qk.notifications(slug) });
+    };
+
     const refreshProjects = () => void qc.invalidateQueries({ queryKey: qk.projects(slug) });
     const refreshMembers = () => void qc.invalidateQueries({ queryKey: qk.members(slug) });
 
@@ -70,6 +77,8 @@ export function useWorkspaceSocket(workspace: WorkspaceDto) {
     s.on('member:joined', refreshMembers);
     s.on('member:roleChanged', refreshMembers);
     s.on('member:removed', refreshMembers);
+    s.on('notification:new', onNotification);
+    s.on('notification:read', onNotification); // read in another tab
 
     if (s.connected) join();
     else s.connect(); // → 'connect' → join()
@@ -87,6 +96,8 @@ export function useWorkspaceSocket(workspace: WorkspaceDto) {
       s.off('member:joined', refreshMembers);
       s.off('member:roleChanged', refreshMembers);
       s.off('member:removed', refreshMembers);
+      s.off('notification:new', onNotification);
+      s.off('notification:read', onNotification);
     };
   }, [id, slug, name, qc, navigate]);
 }

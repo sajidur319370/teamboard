@@ -68,6 +68,11 @@ const PROBES: Probe[] = [
   { route: 'PATCH /comments/:commentId', body: () => ({ body: 'pwned' }) },
   { route: 'DELETE /comments/:commentId' },
   { route: 'GET /activities' },
+  // Day 17: notifications
+  { route: 'GET /notifications' },
+  { route: 'GET /notifications/unread-count' },
+  { route: 'POST /notifications/read-all' },
+  { route: 'POST /notifications/:notificationId/read' },
 ];
 
 /** Path params → B's ids. Add an entry when a route gets a new :param. */
@@ -80,6 +85,7 @@ const B_IDS: Record<string, (t: T) => string> = {
   taskId: (t) => t.b.task.id,
   number: (t) => String(t.b.task.number),
   commentId: (t) => t.b.comment.id,
+  notificationId: (t) => t.b.notificationId,
 };
 
 function request(t: T, probe: Probe, slug: string) {
@@ -146,6 +152,8 @@ describe('cross-tenant isolation', () => {
     expect(board.body.tasks[0].commentCount).toBe(1);
     const comments = await bob.get(`/api/w/${t.b.ws.slug}/tasks/${t.b.task.id}/comments`);
     expect(comments.body.items).toEqual([t.b.comment]); // not edited, not deleted, no new ones
+    const unread = await bob.get(`/api/w/${t.b.ws.slug}/notifications/unread-count`);
+    expect(unread.body.count).toBeGreaterThan(0); // Alice's read-all / read didn't touch Bob's
   });
 
   it("a feed filtered by B's ids, in A's workspace, is empty (filters can't widen the tenant)", async () => {

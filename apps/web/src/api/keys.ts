@@ -26,4 +26,8 @@ export const qk = {
   /** Prefix of every feed (task / project / workspace, any filter), for invalidation. */
   activityAll: (slug: string) => ['w', slug, 'activity'] as const,
   activity: (slug: string, filter: ActivityFilter) => ['w', slug, 'activity', filter] as const,
+  /** Prefix of the bell's queries (count + list), for invalidation. */
+  notificationsAll: (slug: string) => ['w', slug, 'notifications'] as const,
+  unread: (slug: string) => ['w', slug, 'notifications', 'unread'] as const,
+  notifications: (slug: string) => ['w', slug, 'notifications', 'list'] as const,
 };

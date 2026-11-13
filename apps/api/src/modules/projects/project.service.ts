@@ -5,7 +5,7 @@ import {
   type ProjectListItemDto,
   type UpdateProjectInput,
 } from '@teamboard/shared';
-import { Activity, Comment, DEFAULT_COLUMNS, Project, Task } from '../../db/models';
+import { Activity, Comment, DEFAULT_COLUMNS, Notification, Project, Task } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict } from '../../lib/errors';
 import { oid } from '../../lib/ids';
@@ -196,7 +196,8 @@ export async function deleteProject(ctx: Ctx, key: string, confirmKey: string) {
     const scope = { workspaceId: ctx.workspaceId, projectId: p._id };
     await Task.deleteMany(scope, { session });
     await Comment.deleteMany(scope, { session });
-    // Add as the models arrive: Notification (Day 17), Sprint (Day 18)
+    await Notification.deleteMany(scope, { session });
+    // Day 18: Sprint
     await Activity.deleteMany(scope, { session });
     await Project.deleteOne({ _id: p._id, workspaceId: ctx.workspaceId }, { session });
     // Workspace-level (no projectId), so it survives as the record of what was deleted.

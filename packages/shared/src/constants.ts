@@ -112,6 +112,7 @@ export const NOTIFICATION_TYPES = [
   'sprint.started',
   'sprint.completed',
 ] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export const LIMITS = {
   workspacesPerUser: 10,

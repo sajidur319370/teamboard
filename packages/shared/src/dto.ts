@@ -1,5 +1,5 @@
 // Response shapes shared by the API (which builds them) and the web app (which reads them).
-import type { ColumnCategory, PaletteColor, Priority, Role } from './constants';
+import type { ColumnCategory, NotificationType, PaletteColor, Priority, Role } from './constants';
 
 export type Id = string;
 
@@ -223,4 +223,26 @@ export interface CreateCommentResponse {
 }
 export interface DeleteCommentResponse {
   commentCount: number;
+}
+
+/** A snapshot for rendering, so the bell still reads right after renames and deletes. */
+export interface NotificationData {
+  projectKey?: string;
+  taskNumber?: number;
+  taskTitle?: string;
+  role?: Role;
+  excerpt?: string; // comment.created
+  fields?: ('dueDate' | 'priority')[]; // task.updated (N5)
+  sprintName?: string; // Day 18
+}
+
+export interface NotificationDto {
+  id: Id;
+  type: NotificationType;
+  actor: PersonRef;
+  projectId: Id | null;
+  taskId: Id | null;
+  data: NotificationData;
+  readAt: string | null;
+  createdAt: string;
 }

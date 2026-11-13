@@ -47,7 +47,7 @@ export type DomainEvent =
       projectId: Types.ObjectId;
       task: TaskCardDto;
       fromColumnId: string;
-      completed: boolean;
+      intoDone: boolean; // N4 notifies only on this transition, not on reorders inside Done
     }
   | {
       type: 'column.rebalanced';

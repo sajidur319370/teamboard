@@ -34,6 +34,14 @@ export async function makeComment(
   return res.body.comment as CommentDto;
 }
 
+/** The id of the newest notification of this user in this workspace. */
+export async function firstNotificationId(token: string, ws: WorkspaceDto) {
+  const res = await as(token).get(`/api/w/${ws.slug}/notifications?limit=1`);
+  const id = (res.body.items as { id: string }[] | undefined)?.[0]?.id;
+  if (!id) throw new Error(`no notification: ${JSON.stringify(res.body)}`);
+  return id;
+}
+
 let n = 0;
 
 export async function makeWorkspace(token: string, name = 'Acme') {
@@ -107,7 +115,19 @@ export async function twoTenants() {
     const label = await makeLabel(owner.token, ws, key);
     const task = await makeTask(owner.token, ws, key, { title: `${wsName} task` });
     const comment = await makeComment(owner.token, ws, task.id, `${wsName} comment`);
-    return { ...owner, ws, member, inviteId: invite.id, project, label, task, comment };
+    // The member joining via the owner's invite notified the owner (N7)
+    const notificationId = await firstNotificationId(owner.token, ws);
+    return {
+      ...owner,
+      ws,
+      member,
+      inviteId: invite.id,
+      project,
+      label,
+      task,
+      comment,
+      notificationId,
+    };
   };
   return {
     a: await make('Alice', 'A Corp', 'AAA'),
@@ -151,6 +171,8 @@ export async function makeTeam() {
     label,
     task,
     comment,
+    // The OWNER's (invite accepted, N7): other roles reading it get 404, never 403.
+    notificationId: await firstNotificationId(owner.token, ws),
   };
 }
 export type Team = Awaited<ReturnType<typeof makeTeam>>;

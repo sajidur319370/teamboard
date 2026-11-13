@@ -2,7 +2,15 @@
 // event name or payload can't drift between the server that emits it and the client that
 // listens. Clients NEVER write over the socket (FR-RT-05): only these joins/leaves go up.
 import type { Role } from './constants';
-import type { ColumnDto, CommentDto, Id, MemberDto, ProjectDto, TaskCardDto } from './dto';
+import type {
+  ColumnDto,
+  CommentDto,
+  Id,
+  MemberDto,
+  NotificationDto,
+  ProjectDto,
+  TaskCardDto,
+} from './dto';
 
 /** Fields on EVERY server→client payload (FR-RT-07). */
 export interface Envelope {
@@ -42,7 +50,15 @@ export interface ServerToClientEvents {
   // user:<id>
   'membership:revoked': (p: { workspaceId: Id }) => void;
   'membership:roleChanged': (p: { workspaceId: Id; role: Role }) => void;
-  // Day 17: notification:new  ·  Day 18: sprint:*, tasks:sprintChanged
+  /** FR-NTF-05: a new notification, with the recipient's unread count for that workspace. */
+  'notification:new': (p: {
+    workspaceId: Id;
+    notification: NotificationDto;
+    unreadCount: number;
+  }) => void;
+  /** Marked read in one tab: the bell in the user's OTHER tabs follows (not in the catalog). */
+  'notification:read': (p: { workspaceId: Id; unreadCount: number }) => void;
+  // Day 18: sprint:*, tasks:sprintChanged
 }
 
 export type Ack = { ok: true } | { ok: false; code: string };

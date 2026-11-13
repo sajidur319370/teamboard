@@ -9,6 +9,7 @@ import { httpLogger } from './lib/httpLogger';
 import { rejectDollarKeys } from './middleware/rejectDollarKeys';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRouter } from './routes';
+import { startNotifier } from './notifications/fromEvents';
 
 export interface AppOptions {
   /**
@@ -21,6 +22,7 @@ export interface AppOptions {
 
 /** Builds the Express app without listening, so tests can import it. */
 export function createApp(options: AppOptions = {}) {
+  startNotifier(); // domain events → notifications (idempotent: once per process)
   const app = express();
   app.set('trust proxy', 1); // behind Render's proxy: correct req.ip for rate limits, secure cookies
   app.disable('x-powered-by');

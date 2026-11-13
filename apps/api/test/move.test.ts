@@ -152,7 +152,7 @@ describe('done / reopen (FR-ORD-14, BR-07)', () => {
     expect(
       events
         .filter((e) => e.type === 'task.moved')
-        .map((e) => e.type === 'task.moved' && e.completed),
+        .map((e) => e.type === 'task.moved' && e.intoDone),
     ).toEqual([true, false]);
   });
 

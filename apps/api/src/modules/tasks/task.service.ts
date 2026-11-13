@@ -6,7 +6,7 @@ import {
   type TaskDto,
   type UpdateTaskInput,
 } from '@teamboard/shared';
-import { Activity, CARD_FIELDS, Comment, Project, Task } from '../../db/models';
+import { Activity, CARD_FIELDS, Comment, Notification, Project, Task } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { oid } from '../../lib/ids';
@@ -279,7 +279,8 @@ export async function deleteTask(ctx: Ctx, taskId: Types.ObjectId) {
     // Same transaction: a comment racing this delete either lands first (and is deleted
     // here) or finds no task (404). No orphans either way.
     await Comment.deleteMany({ workspaceId: ctx.workspaceId, taskId }, { session });
-    // Day 17: Notification.deleteMany · Day 18: scope delta (D9)
+    await Notification.deleteMany({ workspaceId: ctx.workspaceId, taskId }, { session }); // dead links
+    // Day 18: scope delta (D9)
     await Activity.create(
       [
         activity(

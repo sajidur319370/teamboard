@@ -9,12 +9,13 @@ export type CommentBodyInput = z.infer<typeof commentBodySchema>;
 export const commentIdParams = z.object({ commentId: objectIdSchema });
 
 /** Opaque, base64url (lib/cursor.ts). An empty value means "first page". */
-const cursorSchema = z
+export const cursorSchema = z
   .string()
   .max(200)
   .regex(/^[A-Za-z0-9_-]*$/, 'Invalid cursor')
   .optional();
-const limitSchema = (fallback: number) => z.coerce.number().int().min(1).max(100).default(fallback);
+export const limitSchema = (fallback: number) =>
+  z.coerce.number().int().min(1).max(100).default(fallback);
 
 /** FR-CMT-04: oldest first, 50 per page. */
 export const commentsQuery = z.object({ cursor: cursorSchema, limit: limitSchema(50) });

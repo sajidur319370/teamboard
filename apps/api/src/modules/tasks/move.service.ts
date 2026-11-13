@@ -91,6 +91,7 @@ type MoveResult =
       rank: string;
       fromColumnId: string;
       projectId: Types.ObjectId;
+      intoDone: boolean;
     };
 
 /** PATCH /tasks/:taskId/move: writes EXACTLY ONE task document (FR-ORD, queries.md §6). */
@@ -198,6 +199,7 @@ export async function moveTask(
         rank,
         fromColumnId: String(task.columnId),
         projectId: task.projectId,
+        intoDone,
       };
     }),
   );
@@ -209,7 +211,7 @@ export async function moveTask(
         projectId: result.projectId,
         task: result.task,
         fromColumnId: result.fromColumnId,
-        completed: !!result.task.completedAt,
+        intoDone: result.intoDone, // THIS move completed it (not: reordered inside Done)
       },
     ]);
     if (result.rank.length > LIMITS.rankMaxLength) {
