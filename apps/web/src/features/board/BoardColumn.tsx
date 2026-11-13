@@ -8,6 +8,8 @@ import { useBoardCtx } from './BoardContext';
 import { CATEGORY_LABEL, ColumnMenu } from './ColumnMenu';
 import { QuickAdd } from './QuickAdd';
 import { TaskCard } from './TaskCard';
+import { DroppableColumn } from './dnd/DroppableColumn';
+import { SortableCard } from './dnd/SortableCard';
 
 const CATEGORY_DOT: Record<ColumnCategory, string> = {
   todo: 'bg-gray-400',
@@ -22,10 +24,11 @@ export function BoardColumn(props: {
   totalInColumn: number;
 }) {
   const { column, tasks } = props;
-  const { board, slug, projectKey } = useBoardCtx();
+  const { board, slug, projectKey, taskPath } = useBoardCtx();
   const can = useCan();
   const archived = !!board.project.archivedAt;
   const canCreate = can('task:create') && !archived;
+  const canMove = can('task:move') && !archived; // Viewers: no dragging (FR-RBAC-10)
   const canManage = can('column:manage') && !archived;
   const [renaming, setRenaming] = useState(false);
   const update = useUpdateColumn(slug, projectKey);
@@ -80,16 +83,22 @@ export function BoardColumn(props: {
         )}
       </header>
 
-      <ol className="min-h-8 flex-1 space-y-2 overflow-y-auto px-2 pb-2">
+      <DroppableColumn id={column.id} taskIds={tasks.map((t) => t.id)}>
         {tasks.map((t) => (
-          <li key={t.id}>
+          <SortableCard
+            key={t.id}
+            id={t.id}
+            href={taskPath(t.number)}
+            label={`${projectKey}-${t.number}: ${t.title}`}
+            disabled={!canMove}
+          >
             <TaskCard task={t} />
-          </li>
+          </SortableCard>
         ))}
         {tasks.length === 0 && !canCreate && (
-          <li className="px-1 py-2 text-xs text-muted-foreground">No tasks</li>
+          <p className="px-1 py-2 text-xs text-muted-foreground">No tasks</p>
         )}
-      </ol>
+      </DroppableColumn>
 
       {canCreate && (
         <div className="px-2 pb-2">

@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -29,18 +28,24 @@ const DUE_CLASS = {
   overdue: 'font-medium text-red-600',
 } as const;
 
-/** FR-BRD-08: number, title (2 lines), avatars (3 + "+N"), priority, due date, labels, comments, points. */
-export function TaskCard({ task }: { task: TaskCardDto }) {
-  const { projectKey, people, labels, tz, taskPath } = useBoardCtx();
+/**
+ * FR-BRD-08: number, title (2 lines), avatars (3 + "+N"), priority, due date, labels, comments,
+ * points. A plain div: SortableCard around it handles focus, click, keyboard and drag
+ * (one tab stop per card). `lifted` = the floating copy under the cursor while dragging.
+ */
+export function TaskCard({ task, lifted = false }: { task: TaskCardDto; lifted?: boolean }) {
+  const { projectKey, people, labels, tz } = useBoardCtx();
   const due = dueState(task.dueDate, !!task.completedAt, tz);
   const assignees = task.assigneeIds.map((id) => people.get(id)).filter((p) => !!p);
   const chips = task.labelIds.map((id) => labels.get(id)).filter((l) => !!l);
   const compact = useUi((s) => s.compactCards); // compact: title + number only
 
   return (
-    <Link
-      to={taskPath(task.number)}
-      className="block rounded-md border bg-card p-3 text-left shadow-xs transition hover:border-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+    <div
+      className={cn(
+        'cursor-pointer rounded-md border bg-card p-3 text-left shadow-xs transition select-none hover:border-foreground/30',
+        lifted && 'rotate-2 cursor-grabbing shadow-lg',
+      )}
     >
       <div className="mb-1 flex items-center gap-1 text-xs text-muted-foreground">
         {PRIORITY_ICON[task.priority]}
@@ -96,6 +101,6 @@ export function TaskCard({ task }: { task: TaskCardDto }) {
           </span>
         </div>
       )}
-    </Link>
+    </div>
   );
 }
