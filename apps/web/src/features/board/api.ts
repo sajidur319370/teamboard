@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { BoardResponse, CreateTaskInput, TaskDto, UpdateTaskInput } from '@teamboard/shared';
 import { ApiError, http } from '@/api/client';
 import { qk } from '@/api/keys';
+import { newMutationId } from '@/socket/mutationIds';
 
 export const useBoard = (slug: string, key: string, sprint: string) =>
   useQuery({
@@ -24,7 +25,9 @@ export function useCreateTask(slug: string, key: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (v: CreateTaskInput) =>
-      http.post<{ task: TaskDto }>(`/w/${slug}/projects/${key}/tasks`, v),
+      http.post<{ task: TaskDto }>(`/w/${slug}/projects/${key}/tasks`, v, {
+        clientMutationId: newMutationId(), // this tab ignores its own echo (FR-RT-08)
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) }),
   });
 }
@@ -33,7 +36,9 @@ export function useUpdateTask(slug: string, key: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, ...patch }: UpdateTaskInput & { id: string }) =>
-      http.patch<{ task: TaskDto }>(`/w/${slug}/tasks/${id}`, patch),
+      http.patch<{ task: TaskDto }>(`/w/${slug}/tasks/${id}`, patch, {
+        clientMutationId: newMutationId(),
+      }),
     onSuccess: ({ task }) => {
       qc.setQueryData(qk.task(slug, key, task.number), task); // the drawer updates instantly
       void qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) });
@@ -52,7 +57,9 @@ export function useDeleteTask(slug: string, key: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (task: Pick<TaskDto, 'id' | 'number'>) =>
-      http.delete<void>(`/w/${slug}/tasks/${task.id}`),
+      http.delete<void>(`/w/${slug}/tasks/${task.id}`, undefined, {
+        clientMutationId: newMutationId(),
+      }),
     onSuccess: (_void, task) => {
       qc.removeQueries({ queryKey: qk.task(slug, key, task.number) });
       void qc.invalidateQueries({ queryKey: qk.boardAll(slug, key) });

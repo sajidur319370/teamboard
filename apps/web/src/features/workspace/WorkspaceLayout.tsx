@@ -17,6 +17,8 @@ import { forgetWorkspace, rememberWorkspace } from '@/lib/lastWorkspace';
 import { cn } from '@/lib/utils';
 import { useWorkspaceQuery } from './api';
 import { WorkspaceProvider } from './WorkspaceContext';
+import { ConnectionPill } from '@/socket/connection';
+import { WorkspaceRealtime } from '@/socket/useWorkspaceSocket';
 
 const NAV: { to: string; label: string; icon: LucideIcon }[] = [
   { to: 'projects', label: 'Projects', icon: FolderKanbanIcon },
@@ -72,6 +74,9 @@ export function WorkspaceLayout() {
     <WorkspaceProvider value={q.data}>
       <div className="flex h-screen flex-col">
         <AppHeader current={q.data.workspace} />
+        {/* Live updates: join workspace:<id>, handle role changes and removal (Day 15) */}
+        <WorkspaceRealtime workspace={q.data.workspace} />
+        <ConnectionPill />
         {/* Phones: the nav becomes a scrollable row under the header */}
         <nav
           className="flex gap-1 overflow-x-auto border-b px-2 py-1.5 md:hidden"

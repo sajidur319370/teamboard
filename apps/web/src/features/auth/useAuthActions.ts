@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import type { AuthResponse, LoginInput, MeResponse, RegisterInput } from '@teamboard/shared';
 import { http, setAccessToken } from '@/api/client';
 import { qk } from '@/api/keys';
+import { disconnectSocket } from '@/socket/client';
 
 /** Shared by login and register: store the token, load /me into the cache, go to returnTo. */
 function useOnSignedIn(returnTo: string) {
@@ -36,6 +37,7 @@ export function useClearSession() {
   const qc = useQueryClient();
   return () => {
     setAccessToken(null);
+    disconnectSocket(); // the next user connects with their own token
     qc.clear(); // drop every cached query of the previous user
     qc.setQueryData(qk.me, null);
   };

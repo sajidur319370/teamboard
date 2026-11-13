@@ -13,6 +13,8 @@ import { FilterBar } from './FilterBar';
 import { TaskCard } from './TaskCard';
 import { BoardDnd } from './dnd/BoardDnd';
 import { useMoveTask } from './useMoveTask';
+import { withLiveNeighbors } from './dnd/dropLogic';
+import { useBoardSocket } from '@/socket/useBoardSocket';
 import { useBoard } from './api';
 import { groupByColumn } from './grouping';
 import { matches, parseFilters } from './useBoardFilters';
@@ -33,6 +35,7 @@ export function BoardPage() {
   const myId = useMe().data?.user.id ?? '';
   const board = useBoard(slug, key, sprint);
   const move = useMoveTask(slug, key, sprint); // optimistic, with rollback (FR-ORD-11)
+  useBoardSocket(slug, key, board.data?.project.id); // live updates from everyone else (Day 15)
 
   const ctx = useMemo<BoardCtx | null>(() => {
     if (!board.data) return null;
@@ -113,7 +116,9 @@ export function BoardPage() {
               anchors on prev and reads what's really after it, so hidden cards stay put. */}
           <BoardDnd
             columns={shown}
-            onMove={(v) => move.mutate(v)}
+            onMove={(v) =>
+              move.mutate(withLiveNeighbors(v, new Set(ctx.board.tasks.map((t) => t.id))))
+            }
             taskLabel={(id) => {
               const t = ctx.board.tasks.find((x) => x.id === id);
               return t ? `${project.key}-${t.number}` : 'task';

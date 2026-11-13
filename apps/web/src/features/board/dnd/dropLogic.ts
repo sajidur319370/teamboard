@@ -75,6 +75,20 @@ export function computeDrop(
   return { taskId: activeId, toColumnId: col, prevTaskId, nextTaskId };
 }
 
+/**
+ * During a drag the board shows a FROZEN copy (so live updates can't move cards under the
+ * cursor). A neighbour in that copy may have been deleted by someone else meanwhile; sending
+ * its id would make the server answer 404. Drop such neighbours: the server then anchors on
+ * the other one, or puts the card at the bottom.
+ */
+export function withLiveNeighbors(v: MoveVars, liveIds: ReadonlySet<string>): MoveVars {
+  return {
+    ...v,
+    prevTaskId: v.prevTaskId && liveIds.has(v.prevTaskId) ? v.prevTaskId : null,
+    nextTaskId: v.nextTaskId && liveIds.has(v.nextTaskId) ? v.nextTaskId : null,
+  };
+}
+
 /** A rank FOR DISPLAY ONLY, so the card sorts into place before the server answers. */
 export function provisionalRank(prev?: string, next?: string): string {
   try {

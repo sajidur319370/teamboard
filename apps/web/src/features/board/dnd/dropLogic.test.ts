@@ -8,6 +8,7 @@ import {
   orderOf,
   previewMove,
   restoreTask,
+  withLiveNeighbors,
 } from './dropLogic';
 
 const card = (id: string, columnId: string, rank: string, version = 1): TaskCardDto => ({
@@ -93,6 +94,14 @@ describe('computeDrop: exactly one request per real drop, none for drop-in-place
     const back = previewMove(away, 'B', 'C'); // over C in To Do → inserted above C, i.e. A B C
     expect(back.todo!.map((t) => t.id)).toEqual(['A', 'B', 'C']);
     expect(computeDrop(start, back, 'B', 'B')).toBeNull();
+  });
+});
+
+describe('withLiveNeighbors', () => {
+  it('drops neighbours that were deleted during the drag', () => {
+    const v = { taskId: 'A', toColumnId: 'doing', prevTaskId: 'gone', nextTaskId: 'D' };
+    expect(withLiveNeighbors(v, new Set(['A', 'D']))).toEqual({ ...v, prevTaskId: null });
+    expect(withLiveNeighbors(v, new Set(['A', 'D', 'gone']))).toEqual(v);
   });
 });
 
