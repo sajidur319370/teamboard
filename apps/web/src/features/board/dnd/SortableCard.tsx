@@ -33,6 +33,9 @@ export function SortableCard(props: {
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      // dnd-kit marks a non-draggable item aria-disabled, but a read-only card still OPENS:
+      // announcing it as disabled would tell screen readers (and tests) it does nothing.
+      aria-disabled={undefined}
       aria-label={props.label}
       aria-roledescription={props.disabled ? 'task' : 'draggable task'}
       onClick={open}

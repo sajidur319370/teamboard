@@ -25,3 +25,41 @@ jobs:
       - run: npm test
       # Render runs exactly this; catch a broken production build here, not on deploy.
       - run: npm run build
+
+  # TR-07: the real app in a real browser. Two people on one board, roles, a sprint.
+  e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: 'true'
+      NODE_ENV: development
+      MONGODB_URI: mongodb://localhost:27019/teamboard?replicaSet=rs0
+      JWT_ACCESS_SECRET: ci-only-secret-ci-only-secret-ci-only-secret
+      APP_URL: http://localhost:5173
+      SEED_DEMO_PASSWORD: Demo1234!
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: docker compose up -d --wait mongo # the same replica set as local dev (port 27019)
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      # global-setup seeds the demo; the config's webServer starts API + web (npm run dev)
+      - run: npx playwright test
+        working-directory: apps/web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7

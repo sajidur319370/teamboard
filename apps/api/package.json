@@ -9,7 +9,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "db:diff-indexes": "node --env-file=.env.atlas --import tsx scripts/sync-indexes.ts",
-    "db:sync-indexes": "node --env-file=.env.atlas --import tsx scripts/sync-indexes.ts --apply"
+    "db:sync-indexes": "node --env-file=.env.atlas --import tsx scripts/sync-indexes.ts --apply",
+    "seed": "tsx scripts/seed.ts",
+    "seed:atlas": "node --env-file=.env.atlas --import tsx scripts/seed.ts"
   },
   "dependencies": {
     "@teamboard/shared": "*",

@@ -101,8 +101,20 @@ export function BurndownChart({ data, unit }: { data: ChartPoint[]; unit: Report
                 dataKey="remaining"
                 stroke="var(--chart-actual)"
                 strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2, stroke: 'var(--background)' }}
-                activeDot={{ r: 6, strokeWidth: 2, stroke: 'var(--background)' }}
+                // Filled markers with a 2px surface ring. Without the fill, recharts paints them
+                // white and they punch holes in the line.
+                dot={{
+                  r: 4,
+                  fill: 'var(--chart-actual)',
+                  strokeWidth: 2,
+                  stroke: 'var(--background)',
+                }}
+                activeDot={{
+                  r: 6,
+                  fill: 'var(--chart-actual)',
+                  strokeWidth: 2,
+                  stroke: 'var(--background)',
+                }}
                 connectNulls={false}
                 isAnimationActive={false}
               />
@@ -114,7 +126,8 @@ export function BurndownChart({ data, unit }: { data: ChartPoint[]; unit: Report
                   r={0}
                   label={{
                     value: String(last.remaining),
-                    position: 'right',
+                    position: 'top', // above the point: clear of the ideal line beside it
+                    offset: 10,
                     fill: 'var(--foreground)',
                     fontSize: 12,
                     fontWeight: 600,

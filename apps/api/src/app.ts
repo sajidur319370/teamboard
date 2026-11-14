@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { env } from './config/env';
 import { httpLogger } from './lib/httpLogger';
 import { rejectDollarKeys } from './middleware/rejectDollarKeys';
+import { apiLimiter } from './middleware/rateLimits';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiRouter } from './routes';
 import { startNotifier } from './notifications/fromEvents';
@@ -32,10 +33,22 @@ export function createApp(options: AppOptions = {}) {
   app.use(
     helmet({
       contentSecurityPolicy: {
+        // Spelled out (not helmet's defaults) so the policy is reviewable in one place.
+        useDefaults: false,
         directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"], // no inline scripts, no CDNs: the build is self-contained
+          styleSrc: ["'self'", "'unsafe-inline'"], // Radix, sonner and recharts set inline styles
+          imgSrc: ["'self'", 'data:'],
+          fontSrc: ["'self'", 'data:'], // Geist is bundled
           // Our own origin plus its wss:// form for Socket.io. Older Safari versions don't
           // treat wss: as 'self', which would silently block the live board.
           connectSrc: ["'self'", env.APP_URL.replace(/^http/, 'ws')],
+          frameAncestors: ["'none'"], // nobody may frame us (clickjacking)
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          upgradeInsecureRequests: env.NODE_ENV === 'production' ? [] : null,
         },
       },
     }),
@@ -60,7 +73,7 @@ export function createApp(options: AppOptions = {}) {
     }
   });
 
-  app.use('/api', apiRouter);
+  app.use('/api', apiLimiter, apiRouter);
 
   if (options.webDist) serveWebApp(app, options.webDist);
 

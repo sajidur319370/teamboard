@@ -22,6 +22,8 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
     const join = () =>
       s.emit('board:join', { projectId }, (r) => {
         if (!r.ok) console.warn('board:join failed', r.code);
+        // A hook for E2E tests: live events for this board will arrive from now on.
+        else document.documentElement.dataset.boardLive = projectId;
       });
     const mine = (p: { clientMutationId?: string }) => isOwnMutation(p.clientMutationId); // FR-RT-08
     const refreshDrawer = (n: number) =>
@@ -110,6 +112,7 @@ export function useBoardSocket(slug: string, key: string, projectId: string | un
 
     return () => {
       s.emit('board:leave', { projectId });
+      delete document.documentElement.dataset.boardLive;
       stopJoining();
       s.off('task:created', onTask);
       s.off('task:updated', onTask);

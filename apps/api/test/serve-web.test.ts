@@ -51,6 +51,27 @@ describe('single-origin web serving (production)', () => {
     expect(res.headers['content-security-policy']).toContain("script-src 'self'");
   });
 
+  it('the CSP is explicit and strict: no framing, no plugins, no inline or eval scripts', async () => {
+    const csp = (await request(app).get('/')).headers['content-security-policy'] as string;
+    const directives = Object.fromEntries(
+      csp.split(';').map((d) => {
+        const [name, ...values] = d.trim().split(/\s+/);
+        return [name, values.join(' ')];
+      }),
+    );
+    expect(directives).toMatchObject({
+      'default-src': "'self'",
+      'script-src': "'self'",
+      'frame-ancestors': "'none'",
+      'object-src': "'none'",
+      'base-uri': "'self'",
+      'form-action': "'self'",
+    });
+    expect(directives['connect-src']).toMatch(/^'self' ws:\/\//); // sockets on the same host
+    expect(csp).not.toMatch(/unsafe-eval/);
+    expect(directives['script-src']).not.toMatch(/unsafe-inline/);
+  });
+
   it('without webDist (dev, tests) nothing is served at /', async () => {
     expect((await request(createApp()).get('/')).status).toBe(404);
   });

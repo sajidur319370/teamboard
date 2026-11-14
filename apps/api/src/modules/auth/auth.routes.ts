@@ -9,7 +9,7 @@ import {
 } from '@teamboard/shared';
 import { validate, valid } from '../../middleware/validate';
 import { authenticate } from '../../middleware/authenticate';
-import { authLimiter } from '../../middleware/rateLimits';
+import { authLimiter, loginLimiter } from '../../middleware/rateLimits';
 import * as auth from './auth.service';
 import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from './cookies';
 
@@ -36,7 +36,7 @@ authRouter.post('/register', authLimiter, validate(registerReq), async (req, res
 });
 
 const loginReq = { body: loginSchema };
-authRouter.post('/login', authLimiter, validate(loginReq), async (req, res) => {
+authRouter.post('/login', loginLimiter, validate(loginReq), async (req, res) => {
   const { user, accessToken, refreshToken } = await auth.login(
     valid(req, loginReq).body,
     meta(req),

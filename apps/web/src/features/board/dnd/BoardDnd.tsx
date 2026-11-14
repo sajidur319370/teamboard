@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -12,10 +12,10 @@ import {
   type DragOverEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { TaskCardDto } from '@teamboard/shared';
 import type { Columns } from '../grouping';
 import { markDragEnd } from './dragClock';
+import { boardKeyboardCoordinates } from './keyboard';
 import { computeDrop, findColumn, previewMove, type MoveVars } from './dropLogic';
 
 interface Props {
@@ -37,12 +37,19 @@ export function BoardDnd(props: Props) {
   const [startCols, setStartCols] = useState<Columns | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const view = dragCols ?? props.columns;
+  // Read at key-press time (a ref), so the sensor needn't be rebuilt when columns change.
+  const columnIds = useRef(new Set<string>());
+  useLayoutEffect(() => {
+    columnIds.current = new Set(Object.keys(props.columns));
+  }, [props.columns]);
+  // eslint-disable-next-line react-hooks/refs -- read lazily, on a key press, not during render
+  const [coordinateGetter] = useState(() => boardKeyboardCoordinates(() => columnIds.current));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), // a click isn't a drag
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }), // long-press
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
+      coordinateGetter, // Left/Right = next column, Up/Down = reorder
       // Enter is NOT a start key (dnd-kit's default): Enter opens the card instead.
       keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space', 'Enter', 'Tab'] },
     }),

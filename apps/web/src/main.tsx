@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { queryClient } from '@/api/queryClient';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppRoutes } from './routes';
 import './index.css';
 
@@ -17,7 +18,9 @@ createRoot(root).render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
       <Toaster richColors position="bottom-right" />

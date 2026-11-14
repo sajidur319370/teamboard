@@ -43,6 +43,7 @@ export function BoardColumn(props: {
   return (
     <section
       aria-labelledby={headingId}
+      data-testid={`column-${column.name}`} // E2E: find a card's column by name
       className="flex max-h-full w-72 shrink-0 flex-col rounded-lg bg-muted/50"
     >
       <header className="flex items-center gap-2 px-3 pt-3 pb-2">
