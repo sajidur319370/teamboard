@@ -9,6 +9,10 @@ test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
 const out = (name: string) => path.resolve(import.meta.dirname, '../../../docs', name);
 
 test('README screenshots', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: /Log in as Owner/ })).toBeVisible();
+  await page.screenshot({ path: out('login.png') });
+
   await login(page, 'admin');
 
   await page.goto('/w/acme/p/MOB/board');

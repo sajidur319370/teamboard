@@ -6,6 +6,7 @@ import { validate, valid } from '../../middleware/validate';
 import { changePassword } from '../auth/auth.service';
 import { listMyWorkspaces } from '../workspaces/workspace.service';
 import { toUserDto } from './user.dto';
+import { assertNotDemoAccount } from '../../demo/guard';
 
 export const meRouter = Router(); // mounted behind `authenticate`
 
@@ -20,6 +21,7 @@ meRouter.get('/', async (req, res) => {
 
 const updateReq = { body: updateMeSchema };
 meRouter.patch('/', validate(updateReq), async (req, res) => {
+  await assertNotDemoAccount(req.userId);
   const user = await User.findByIdAndUpdate(
     req.userId,
     { $set: valid(req, updateReq).body },
@@ -31,6 +33,7 @@ meRouter.patch('/', validate(updateReq), async (req, res) => {
 
 const pwReq = { body: changePasswordSchema };
 meRouter.patch('/password', validate(pwReq), async (req, res) => {
+  await assertNotDemoAccount(req.userId); // shared accounts: nobody can lock the others out
   const { currentPassword, newPassword } = valid(req, pwReq).body;
   await changePassword(req.userId, req.sessionId, currentPassword, newPassword);
   res.json({ ok: true });

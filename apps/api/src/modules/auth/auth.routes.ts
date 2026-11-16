@@ -6,10 +6,18 @@ import {
   resetPasswordSchema,
   type AuthResponse,
   type RefreshResponse,
+  DEMO_ROLES,
+  demoEmail,
+  demoLoginSchema,
+  type DemoInfo,
 } from '@teamboard/shared';
 import { validate, valid } from '../../middleware/validate';
 import { authenticate } from '../../middleware/authenticate';
-import { authLimiter, loginLimiter } from '../../middleware/rateLimits';
+import { authLimiter, demoLoginLimiter, loginLimiter } from '../../middleware/rateLimits';
+import { env } from '../../config/env';
+import { assertNotDemoAccount } from '../../demo/guard';
+import { demoResetDone } from '../../demo/autoReset';
+import { notFound } from '../../lib/errors';
 import * as auth from './auth.service';
 import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from './cookies';
 
@@ -45,6 +53,30 @@ authRouter.post('/login', loginLimiter, validate(loginReq), async (req, res) => 
   res.json({ user, accessToken } satisfies AuthResponse);
 });
 
+// ---- DEMO_MODE: one-click logins on the login page ----
+authRouter.get('/demo', (_req, res) => {
+  const info: DemoInfo = env.DEMO_MODE
+    ? {
+        enabled: true,
+        accounts: DEMO_ROLES.map((role) => ({ role, email: demoEmail(role) })),
+        resetHours: env.DEMO_RESET_HOURS || null,
+      }
+    : { enabled: false, accounts: [], resetHours: null };
+  res.json(info);
+});
+
+const demoReq = { body: demoLoginSchema };
+authRouter.post('/demo', demoLoginLimiter, validate(demoReq), async (req, res) => {
+  if (!env.DEMO_MODE) throw notFound();
+  await demoResetDone(); // a reset in progress: wait for the fresh demo, don't fail
+  const { user, accessToken, refreshToken } = await auth.loginDemo(
+    valid(req, demoReq).body.role,
+    meta(req),
+  );
+  setRefreshCookie(res, refreshToken);
+  res.json({ user, accessToken } satisfies AuthResponse);
+});
+
 authRouter.post('/refresh', async (req, res) => {
   try {
     const { accessToken, refreshToken } = await auth.refresh(cookie(req), meta(req));
@@ -63,6 +95,7 @@ authRouter.post('/logout', async (req, res) => {
 });
 
 authRouter.post('/logout-all', authenticate, async (req, res) => {
+  await assertNotDemoAccount(req.userId); // would sign out every visitor sharing the account
   await auth.logoutAll(req.userId);
   clearRefreshCookie(res);
   res.status(204).end();

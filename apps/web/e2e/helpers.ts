@@ -7,7 +7,7 @@ export async function login(page: Page, who: Who) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(`${who}@demo.teamboard.dev`);
   await page.getByLabel('Password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Log in' }).click();
+  await page.getByRole('button', { name: 'Log in', exact: true }).click();
   await page.waitForURL(/\/w\/acme\//);
 }
 

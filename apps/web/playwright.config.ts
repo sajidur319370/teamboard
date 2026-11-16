@@ -25,6 +25,8 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Demo mode on (one-click logins), but no auto reset: global-setup seeds the data.
+    env: { ...process.env, DEMO_MODE: 'true', DEMO_RESET_HOURS: '0' } as Record<string, string>,
     stdout: 'ignore',
     stderr: 'pipe',
   },

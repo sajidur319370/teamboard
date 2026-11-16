@@ -9,6 +9,7 @@ import { applyServerErrors } from '@/lib/formErrors';
 import { safeReturnTo } from '@/lib/safeReturnTo';
 import { AuthCard } from './AuthCard';
 import { useLogin } from './useAuthActions';
+import { DemoLogin } from './DemoLogin';
 
 export function LoginPage() {
   const [params] = useSearchParams();
@@ -26,6 +27,8 @@ export function LoginPage() {
 
   return (
     <AuthCard title="Log in" description="Welcome back to your boards.">
+      {/* Public demo only: a returnTo from a shared link wins over the demo start page */}
+      <DemoLogin returnTo={params.get('returnTo') ? returnTo : null} />
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormField id="email" label="Email" error={errors.email?.message}>
           <Input

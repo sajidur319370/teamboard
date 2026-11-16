@@ -13,3 +13,4 @@ export * from './schemas/comment';
 export * from './schemas/notification';
 export * from './schemas/sprint';
 export * from './activity';
+export * from './demo';

@@ -23,3 +23,12 @@ test('a viewer can open the reports (J5)', async ({ page }) => {
   await expect(page.getByRole('img', { name: /Burndown chart/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Completed per member' })).toBeVisible();
 });
+
+test('demo mode: one click logs in as a role and lands on the running sprint', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByRole('button', { name: /Log in as Viewer/ }).click();
+  await page.waitForURL(/\/w\/acme\/p\/MOB\/board/);
+  await boardReady(page, 'Mobile App v2');
+  await expect(page.getByRole('combobox', { name: 'Board view' })).toContainText('Sprint 3');
+  await expect(page.getByPlaceholder('+ Add task')).toHaveCount(0); // a Viewer
+});

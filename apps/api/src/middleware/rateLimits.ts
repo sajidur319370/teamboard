@@ -44,3 +44,14 @@ export const createLoginLimiter = (limit = 10, enabled = env.NODE_ENV !== 'test'
       next(new AppError(429, 'RATE_LIMITED', 'Too many failed attempts. Try again later.')),
   });
 export const loginLimiter = createLoginLimiter();
+
+/** One-click demo logins: generous (a visitor tries every role), but not unlimited. */
+export const demoLoginLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 60,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: () => env.NODE_ENV === 'test',
+  handler: (_req, _res, next) =>
+    next(new AppError(429, 'RATE_LIMITED', 'Too many demo logins. Try again later.')),
+});

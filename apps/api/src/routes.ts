@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from './middleware/authenticate';
 import { resolveWorkspace } from './middleware/resolveWorkspace';
+import { demoWorkspaceGuard } from './demo/guard';
 import { authRouter } from './modules/auth/auth.routes';
 import { publicInvitesRouter } from './modules/invites/invite.routes';
 import { meRouter } from './modules/users/me.routes';
@@ -14,4 +15,4 @@ apiRouter.use('/me', authenticate, meRouter);
 apiRouter.use('/workspaces', authenticate, workspacesRouter);
 apiRouter.use('/invites', publicInvitesRouter); // preview is public; accept authenticates itself
 // Tenant-scoped: authenticate → resolveWorkspace (req.ctx) → per-route authorize(...)
-apiRouter.use('/w/:slug', authenticate, resolveWorkspace, tenantRouter);
+apiRouter.use('/w/:slug', authenticate, resolveWorkspace, demoWorkspaceGuard, tenantRouter);

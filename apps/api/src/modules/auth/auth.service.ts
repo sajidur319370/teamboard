@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { Types } from 'mongoose';
-import type { LoginInput, RegisterInput } from '@teamboard/shared';
+import { demoEmail, type DemoRole, type LoginInput, type RegisterInput } from '@teamboard/shared';
 import { Session, User } from '../../db/models';
 import { withTransaction } from '../../db/transaction';
 import { env, isProd } from '../../config/env';
-import { badRequest, unauthenticated } from '../../lib/errors';
+import { badRequest, unauthenticated, AppError } from '../../lib/errors';
 import { randomToken, sha256 } from '../../lib/crypto';
 import { addDays, addMinutes } from '../../lib/dates';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '../../lib/password';
@@ -49,6 +49,23 @@ export async function register(input: RegisterInput, meta: ClientMeta) {
     email: input.email,
     passwordHash: await hashPassword(input.password),
   });
+  return { user: toUserDto(user), ...(await startSession(user._id, meta)) };
+}
+
+/**
+ * DEMO_MODE one-click login: a session for a demo account, no password needed (the
+ * accounts are public anyway, and the button keeps working if the password changes).
+ */
+export async function loginDemo(role: DemoRole, meta: ClientMeta) {
+  const user = await User.findOne({ email: demoEmail(role) }).lean();
+  if (!user) {
+    // Between the reset's delete and its re-seed (it takes a minute or so)
+    throw new AppError(
+      503,
+      'DEMO_NOT_READY',
+      'The demo is being refreshed. Try again in a minute.',
+    );
+  }
   return { user: toUserDto(user), ...(await startSession(user._id, meta)) };
 }
 

@@ -1,6 +1,13 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import type { AuthResponse, LoginInput, MeResponse, RegisterInput } from '@teamboard/shared';
+import type {
+  AuthResponse,
+  DemoInfo,
+  DemoRole,
+  LoginInput,
+  MeResponse,
+  RegisterInput,
+} from '@teamboard/shared';
 import { http, setAccessToken } from '@/api/client';
 import { qk } from '@/api/keys';
 import { disconnectSocket } from '@/socket/client';
@@ -20,6 +27,24 @@ export function useLogin(returnTo: string) {
   const onSuccess = useOnSignedIn(returnTo);
   return useMutation({
     mutationFn: (v: LoginInput) => http.post<AuthResponse>('/auth/login', v),
+    onSuccess,
+  });
+}
+
+/** Is this a public demo (DEMO_MODE on the server)? The login page shows role buttons. */
+export const useDemoInfo = () =>
+  useQuery({
+    queryKey: ['demo-info'],
+    queryFn: () => http.get<DemoInfo>('/auth/demo'),
+    staleTime: Infinity,
+    retry: false, // no demo info = no buttons, never an error on the login page
+  });
+
+/** One click: log in as a demo role (no password typed). */
+export function useDemoLogin(returnTo: string) {
+  const onSuccess = useOnSignedIn(returnTo);
+  return useMutation({
+    mutationFn: (role: DemoRole) => http.post<AuthResponse>('/auth/demo', { role }),
     onSuccess,
   });
 }

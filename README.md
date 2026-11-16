@@ -3,7 +3,8 @@
 A multi-tenant project management app (think a small Jira/Trello): workspaces with four roles, Kanban boards with drag and drop, real-time sync between browsers, sprints, and burndown reports. TypeScript end to end: React, Express, MongoDB, Socket.io.
 
 **Live demo:** https://teamboard-yaur.onrender.com
-Log in as `owner@`, `admin@`, `member@` or `viewer@demo.teamboard.dev`, password `Demo1234!`, and open two browsers side by side.
+The login page has **one-click buttons for each role** (Owner, Admin, Member, Viewer). Open a second browser as the Member to watch changes appear live. To log in by hand: `owner@`, `admin@`, `member@` or `viewer@demo.teamboard.dev`, password `Demo1234!`.
+The demo is shared, so its accounts and workspace structure are locked, and the data rebuilds itself every 24 hours.
 Free hosting sleeps when idle: the first load can take ~40 s.
 
 ![The board of the demo project, mid-sprint](docs/board.png)
@@ -89,4 +90,4 @@ CI runs lint, formatting, typecheck, all tests and the production build, then th
 - **Missed socket events aren't replayed.** A reconnecting client refetches what it shows instead.
 - **Free MongoDB Atlas tier:** no point-in-time backups.
 - **Access token in memory, refresh token in an HttpOnly cookie.** The cookie rotates on every use, and reuse of an old one revokes the whole session family.
-- **Password-reset emails** are logged on the server, not sent.
+- **No email yet.** Password-reset links are printed to the server log in development only, never in production, so reset can't be completed on the live demo.

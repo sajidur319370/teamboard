@@ -35,6 +35,7 @@ const NO_REFRESH = new Set([
   '/auth/logout',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/auth/demo',
 ]);
 
 async function send(path: string, init: RequestOptions): Promise<Response> {
