@@ -64,6 +64,45 @@ npm run dev   # http://localhost:5173
 
 `apps/api/.env.example` lists the settings. The seed creates the same demo workspace as the live site, with three sprints of realistic history.
 
+## Reset the demo data
+
+Visitors can move cards, add tasks and comments, and complete sprints. To put the demo back to its starting state, rebuild it.
+
+**Live site (MongoDB Atlas).** This needs `apps/api/.env.atlas`, which git ignores, with the production settings:
+
+```bash
+NODE_ENV=production
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/teamboard?retryWrites=true&w=majority
+JWT_ACCESS_SECRET=<any 32+ characters>
+# SEED_DEMO_PASSWORD=Demo1234!   (optional: the demo accounts' password)
+```
+
+Then run, from the repo root:
+
+```powershell
+# Windows PowerShell
+$env:SEED_ALLOW_PROD="yes"; npm run seed:atlas -w @teamboard/api -- --reset
+```
+g
+```bash
+# macOS / Linux / Git Bash
+SEED_ALLOW_PROD=yes npm run seed:atlas -w @teamboard/api -- --reset
+```
+
+It takes a minute or two. Anyone logged in as a demo user is signed out and simply logs in again.
+
+**Local database (Docker):**
+
+```bash
+npm run seed -w @teamboard/api -- --reset
+```
+
+**What `--reset` removes:** only the demo: the demo accounts (`*@demo.teamboard.dev`), the workspaces they own (`/w/acme` and any a visitor created while logged in as a demo user), and everything inside them. It never drops the database, so real accounts are untouched. It refuses to run if `/w/acme` belongs to a non-demo owner.
+
+**What it doesn't remove:** accounts that visitors create through sign-up, and their workspaces. Delete those in the Atlas UI (`users`, `workspaces` and the related documents) if you need to.
+
+**Automatic:** with `DEMO_MODE=true` on Render, the server does the same rebuild by itself once the demo is 24 hours old (`DEMO_RESET_HOURS`), so a manual reset is only needed when you want a fresh demo right away.
+
 ## Tests
 
 | Suite                                                       | What it proves                                                                     |
